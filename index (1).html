@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Digital colouring books, activity books, ICSE and CBSE sample papers, and study resources from Toppers Books.">
+<title>Toppers Books | Learn • Grow • Succeed</title>
+<style>
+:root{
+  --navy:#103766;--blue:#124d91;--ink:#172b4d;--muted:#5b6b82;
+  --cream:#fff9ee;--sky:#eff7ff;--mint:#eaf9f2;--line:#e5eaf1;
+  --shadow:0 12px 32px rgba(20,52,91,.08);--radius:22px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink);background:#fff}
+a{color:inherit;text-decoration:none}
+button{font:inherit;cursor:pointer}
+.topbar{position:sticky;top:0;z-index:10;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.nav{max-width:1180px;margin:auto;padding:15px 22px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:850;font-size:1.35rem;color:var(--navy);white-space:nowrap}
+.brand-mark{width:42px;height:42px;display:grid;place-items:center;border:2px solid #f4b942;border-radius:13px;background:#fff7dc;font-size:24px}
+.brand small{display:block;font-size:.68rem;letter-spacing:2px;font-weight:650;color:var(--muted);margin-top:2px}
+.navlinks{display:flex;gap:25px;font-size:.92rem;font-weight:650}
+.navlinks a:hover{color:#db7c20}
+.nav-actions{display:flex;gap:10px;align-items:center}
+.cart-btn,.menu-btn{border:1px solid var(--line);background:white;border-radius:12px;padding:10px 13px;color:var(--navy);font-weight:750}
+.menu-btn{display:none}
+.hero{background:linear-gradient(115deg,#fff8e9 0%,#fffaf3 48%,#eaf6ff 100%);overflow:hidden}
+.hero-inner{max-width:1180px;margin:auto;padding:66px 22px 58px;display:grid;grid-template-columns:1.05fr .95fr;align-items:center;gap:30px}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;border:1px solid #f4dca8;background:#fff4d7;color:#815214;border-radius:999px;padding:8px 13px;font-size:.82rem;font-weight:750}
+h1{font-size:clamp(2.6rem,5vw,4.5rem);line-height:1.04;letter-spacing:-2px;margin:18px 0;color:var(--navy)}
+h1 span{color:#e28b2b}
+.hero-copy>p{font-size:1.1rem;line-height:1.7;color:#4d6079;max-width:530px}
+.hero-buttons{display:flex;flex-wrap:wrap;gap:12px;margin-top:25px}
+.primary,.secondary{display:inline-flex;justify-content:center;align-items:center;gap:9px;padding:14px 21px;border-radius:13px;font-weight:800;border:0}
+.primary{background:var(--blue);color:white;box-shadow:0 7px 18px #124d9130}
+.primary:hover{background:#0d3e77;transform:translateY(-1px)}
+.secondary{border:1px solid #d7e0eb;background:white;color:var(--navy)}
+.trust-row{display:flex;gap:18px;flex-wrap:wrap;margin-top:28px;color:#40556e;font-size:.83rem;font-weight:650}
+.trust-row span{display:flex;align-items:center;gap:7px}
+.hero-art{min-height:340px;border-radius:34px;background:radial-gradient(circle at 25% 22%,#fff 0 5%,transparent 5.5%),linear-gradient(145deg,#ffe9bf,#fff4df 48%,#dceeff);position:relative;display:grid;place-items:center;overflow:hidden}
+.hero-art:before,.hero-art:after{content:"";position:absolute;border-radius:50%;background:#fff8; width:180px;height:180px;top:-45px;right:-28px}
+.hero-art:after{width:130px;height:130px;top:auto;right:auto;bottom:-30px;left:-20px;background:#fff7}
+.kids-scene{position:relative;z-index:1;text-align:center;padding:28px}
+.kids-emoji{font-size:clamp(5rem,11vw,8.5rem);line-height:1.4;filter:drop-shadow(0 8px 5px #26405b18)}
+.art-note{background:white;border-radius:15px;padding:12px 18px;box-shadow:var(--shadow);font-weight:850;color:var(--navy);transform:rotate(-3deg)}
+.art-note small{display:block;font-size:.76rem;font-weight:600;color:var(--muted);margin-top:4px}
+.section{max-width:1180px;margin:auto;padding:58px 22px}
+.section-head{text-align:center;margin-bottom:28px}
+.section-head h2{font-size:clamp(1.8rem,3vw,2.45rem);letter-spacing:-.8px;color:var(--navy);margin:0 0 9px}
+.section-head p{color:var(--muted);margin:0;line-height:1.6}
+.categories{display:grid;grid-template-columns:repeat(4,1fr);gap:17px}
+.category{border-radius:var(--radius);padding:24px 18px;text-align:center;transition:.2s;border:1px solid transparent}
+.category:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
+.category:nth-child(1){background:#fff5d7}.category:nth-child(2){background:#f5eaff}.category:nth-child(3){background:#e7f8e9}.category:nth-child(4){background:#e7f4ff}
+.category .emoji{font-size:3.25rem;margin-bottom:11px}
+.category h3{margin:0 0 8px;font-size:1.02rem;color:var(--navy)}
+.category p{margin:0 0 15px;color:#53647b;font-size:.88rem;line-height:1.5;min-height:40px}
+.category button{background:#ffffffb8;border:1px solid #d6dfeb;border-radius:999px;padding:9px 15px;color:var(--navy);font-weight:750}
+.products-section{background:#f7faff}
+.products-section .section{padding-top:54px}
+.product-tools{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;margin-bottom:23px}
+.product-tools h2{margin:0;color:var(--navy);font-size:1.8rem}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.filter{border:1px solid #dce5f0;background:white;color:#4e6078;border-radius:999px;padding:9px 13px;font-size:.85rem;font-weight:750}
+.filter.active,.filter:hover{background:var(--navy);color:white;border-color:var(--navy)}
+.products{display:grid;grid-template-columns:repeat(4,1fr);gap:17px}
+.product{background:white;border:1px solid #e8edf4;border-radius:18px;overflow:hidden;box-shadow:0 5px 18px #183a5b08;display:flex;flex-direction:column}
+.product-cover{margin:12px 12px 0;min-height:190px;border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:15px;position:relative;overflow:hidden}
+.product-cover:before{content:"";position:absolute;width:150px;height:150px;border-radius:50%;background:#ffffff60;top:-60px;right:-45px}
+.cover-kids{background:linear-gradient(145deg,#ffe5a4,#bfe9ce)}
+.cover-unicorn{background:linear-gradient(145deg,#f7d6ff,#dbe7ff)}
+.cover-activity{background:linear-gradient(145deg,#d7f7df,#fff0b9)}
+.cover-icse{background:linear-gradient(145deg,#e2efff,#fff)}
+.cover-cbse{background:linear-gradient(145deg,#e2f6ff,#e9e4ff)}
+.cover-maths{background:linear-gradient(145deg,#fff0d8,#d9edff)}
+.cover-emoji{font-size:3.5rem;z-index:1}
+.cover-label{z-index:1;font-weight:900;color:#123761;font-size:1.1rem;line-height:1.2;margin-top:7px}
+.cover-sub{z-index:1;font-size:.73rem;font-weight:750;color:#4c6179;margin-top:6px}
+.digital-tag{position:absolute;top:10px;left:10px;background:var(--navy);color:white;border-radius:999px;font-size:.65rem;padding:5px 8px;font-weight:750;z-index:2}
+.product-info{padding:14px;display:flex;flex-direction:column;flex:1}
+.product-type{font-size:.72rem;color:#6a7b91;font-weight:750;text-transform:uppercase;letter-spacing:.5px}
+.product h3{font-size:.99rem;line-height:1.35;margin:7px 0;color:#1d3555}
+.product p{font-size:.82rem;color:var(--muted);line-height:1.5;margin:0 0 12px}
+.product-bottom{margin-top:auto}
+.price{font-size:1.15rem;font-weight:900;color:var(--navy);margin-bottom:12px}
+.add-btn{width:100%;background:var(--blue);border:0;border-radius:10px;color:white;padding:11px 10px;font-weight:800}
+.add-btn:hover{background:var(--navy)}
+.empty{grid-column:1/-1;text-align:center;padding:35px;color:var(--muted)}
+.why{background:linear-gradient(90deg,#e8f9f2,#f1faff)}
+.benefits{max-width:1180px;margin:auto;padding:36px 22px;display:grid;grid-template-columns:repeat(4,1fr);gap:22px}
+.benefit{display:flex;gap:12px;align-items:center}
+.benefit-icon{width:46px;height:46px;border-radius:14px;background:white;display:grid;place-items:center;font-size:1.4rem;flex-shrink:0}
+.benefit strong{display:block;color:var(--navy);margin-bottom:4px}
+.benefit span{display:block;font-size:.82rem;line-height:1.45;color:#5a6b80}
+.callout{max-width:1136px;margin:55px auto;padding:0 22px}
+.callout-inner{border-radius:26px;background:var(--navy);color:white;padding:36px;display:flex;align-items:center;justify-content:space-between;gap:22px}
+.callout h2{font-size:clamp(1.5rem,3vw,2.2rem);margin:0 0 8px}
+.callout p{margin:0;color:#d6e5f7;line-height:1.6}
+.callout .primary{background:#ffc96a;color:#15365b;white-space:nowrap}
+footer{background:#0c294b;color:white;padding:34px 22px}
+.footer-inner{max-width:1180px;margin:auto;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
+footer p,footer a{color:#c6d6e8;font-size:.85rem;line-height:1.7}
+footer a:hover{color:white}
+.footer-links{display:flex;gap:17px;flex-wrap:wrap}
+.copyright{max-width:1180px;margin:22px auto 0;border-top:1px solid #ffffff24;padding-top:16px;color:#b8c9dc;font-size:.78rem}
+.cart-panel{position:fixed;right:18px;bottom:18px;z-index:20;background:white;border:1px solid var(--line);box-shadow:0 12px 40px #0b274b25;border-radius:16px;padding:14px 18px;max-width:calc(100% - 36px);display:none;align-items:center;gap:14px}
+.cart-panel.show{display:flex}
+.cart-panel strong{color:var(--navy)}
+.cart-panel button{border:0;background:var(--navy);color:white;border-radius:9px;padding:9px 12px;font-weight:750}
+.notice{font-size:.78rem;color:#6b7a8d;margin-top:10px}
+@media(max-width:900px){.navlinks{gap:13px}.hero-inner{grid-template-columns:1fr 0.8fr}.categories{grid-template-columns:repeat(2,1fr)}.products{grid-template-columns:repeat(2,1fr)}.benefits{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:650px){.nav{padding:12px 15px}.brand{font-size:1.1rem}.brand-mark{width:37px;height:37px}.navlinks{display:none;position:absolute;left:12px;right:12px;top:68px;padding:16px;background:white;border:1px solid var(--line);border-radius:15px;box-shadow:var(--shadow);flex-direction:column;gap:16px}.navlinks.open{display:flex}.menu-btn{display:inline-block}.cart-btn{padding:10px}.hero-inner{grid-template-columns:1fr;padding:42px 18px}.hero-art{min-height:240px}.hero-copy>p{font-size:1rem}h1{letter-spacing:-1.2px}.trust-row{gap:12px}.section{padding:42px 16px}.categories{gap:11px}.category{padding:18px 12px}.category .emoji{font-size:2.6rem}.category p{font-size:.81rem}.products{gap:11px}.product-cover{min-height:150px;margin:8px 8px 0;padding:10px}.cover-emoji{font-size:2.7rem}.cover-label{font-size:.93rem}.product-info{padding:11px}.product h3{font-size:.91rem}.product p{font-size:.78rem}.product-tools h2{font-size:1.55rem}.benefits{padding:27px 17px;gap:17px}.benefit{align-items:flex-start}.benefit-icon{width:38px;height:38px;font-size:1.15rem}.benefit span{font-size:.76rem}.callout{margin:35px auto}.callout-inner{padding:25px;align-items:flex-start;flex-direction:column}.footer-inner{flex-direction:column}}
+@media(max-width:380px){.categories,.products{grid-template-columns:1fr}.product-cover{min-height:210px}.category p{min-height:0}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <nav class="nav" aria-label="Main navigation">
+    <a class="brand" href="#home"><span class="brand-mark">📚</span><span>Toppers Books<small>LEARN • GROW • SUCCEED</small></span></a>
+    <div class="navlinks" id="navlinks">
+      <a href="#home">Home</a><a href="#categories">Kids Books</a><a href="#products" onclick="setFilter('papers')">Board Papers</a><a href="#why">Why Us</a><a href="#contact">Contact</a>
+    </div>
+    <div class="nav-actions">
+      <button class="cart-btn" id="cartButton" aria-label="View cart">🛒 <span id="cartCount">0</span></button>
+      <button class="menu-btn" id="menuButton" aria-label="Open menu">☰</button>
+    </div>
+  </nav>
+</div>
+
+<header class="hero" id="home">
+  <div class="hero-inner">
+    <div class="hero-copy">
+      <span class="eyebrow">✨ DIGITAL BOOKS • INSTANT ACCESS</span>
+      <h1>Little Learners.<br><span>Big Dreams.</span></h1>
+      <p>Make learning fun and exam preparation smarter. Explore creative colouring books, activity packs, sample papers and revision resources—all in convenient digital formats.</p>
+      <div class="hero-buttons"><a class="primary" href="#products">Explore the Store <span>→</span></a><a class="secondary" href="#categories">Browse Categories</a></div>
+      <div class="trust-row"><span>⬇️ Instant digital access*</span><span>🔒 Secure checkout*</span><span>📱 Print or use on a tablet</span></div>
+    </div>
+    <div class="hero-art" role="img" aria-label="Playful illustration representing children learning and reading">
+      <div class="kids-scene"><div class="kids-emoji">👧🏻 📚 👦🏻</div><div class="art-note">Colour • Imagine • Create<small>Resources for curious minds</small></div></div>
+    </div>
+  </div>
+</header>
+
+<section class="section" id="categories">
+  <div class="section-head"><h2>Shop by Category</h2><p>Find the right digital resource for every age and learning goal.</p></div>
+  <div class="categories">
+    <article class="category"><div class="emoji">🦁 🐘 🦋</div><h3>Kids’ Colouring Books</h3><p>Fun printable pages for little artists and big imaginations.</p><button onclick="setFilter('kids')">Explore Books →</button></article>
+    <article class="category"><div class="emoji">🧩 ✏️ 📘</div><h3>Activity Books</h3><p>Puzzles, tracing and creative activities for growing skills.</p><button onclick="setFilter('activity')">Explore Activities →</button></article>
+    <article class="category"><div class="emoji">🎓 📝 📚</div><h3>Board Sample Papers</h3><p>Practice resources for ICSE and CBSE students.</p><button onclick="setFilter('papers')">Explore Papers →</button></article>
+    <article class="category"><div class="emoji">📄 💡 📖</div><h3>Study Resources</h3><p>Revision notes, formula sheets and subject-wise eBooks.</p><button onclick="setFilter('study')">Explore Resources →</button></article>
+  </div>
+</section>
+
+<section class="products-section" id="products">
+  <div class="section">
+    <div class="product-tools"><div><h2>Featured Downloads</h2><p style="margin:7px 0 0;color:var(--muted)">A growing library of learning resources.</p></div>
+      <div class="filters" aria-label="Filter products">
+        <button class="filter active" data-filter="all" onclick="setFilter('all')">All</button>
+        <button class="filter" data-filter="kids" onclick="setFilter('kids')">Kids’ Books</button>
+        <button class="filter" data-filter="activity" onclick="setFilter('activity')">Activities</button>
+        <button class="filter" data-filter="papers" onclick="setFilter('papers')">Board Papers</button>
+        <button class="filter" data-filter="study" onclick="setFilter('study')">Study Tools</button>
+      </div>
+    </div>
+    <div class="products" id="productGrid">
+      <article class="product" data-category="kids">
+        <div class="product-cover cover-kids"><span class="digital-tag">DIGITAL BOOK</span><div class="cover-emoji">🦁 🐘 🦒</div><div class="cover-label">ANIMAL<br>COLOURING BOOK</div><div class="cover-sub">50 CREATIVE PAGES</div></div>
+        <div class="product-info"><span class="product-type">Kids’ Colouring Books</span><h3>My First Animal Colouring Book</h3><p>Animal-themed pages for colouring on a tablet or printing at home.</p><div class="product-bottom"><div class="price">₹149</div><button class="add-btn" onclick="addToCart('My First Animal Colouring Book',149)">＋ Add to Cart</button></div></div>
+      </article>
+      <article class="product" data-category="kids">
+        <div class="product-cover cover-unicorn"><span class="digital-tag">DIGITAL BOOK</span><div class="cover-emoji">🦄 🌈 ⭐</div><div class="cover-label">MAGICAL<br>UNICORN</div><div class="cover-sub">COLOURING FUN</div></div>
+        <div class="product-info"><span class="product-type">Kids’ Colouring Books</span><h3>Magical Unicorn Colouring Book</h3><p>Whimsical designs for kids who love fantasy and creativity.</p><div class="product-bottom"><div class="price">₹149</div><button class="add-btn" onclick="addToCart('Magical Unicorn Colouring Book',149)">＋ Add to Cart</button></div></div>
+      </article>
+      <article class="product" data-category="activity">
+        <div class="product-cover cover-activity"><span class="digital-tag">DIGITAL BOOK</span><div class="cover-emoji">🧩 ✏️ 🎨</div><div class="cover-label">FUN ACTIVITY<br>BOOK</div><div class="cover-sub">LEARN THROUGH PLAY</div></div>
+        <div class="product-info"><span class="product-type">Activity Books</span><h3>Fun Activity Book for Kids</h3><p>Playful puzzles, patterns and simple activities for young learners.</p><div class="product-bottom"><div class="price">₹199</div><button class="add-btn" onclick="addToCart('Fun Activity Book for Kids',199)">＋ Add to Cart</button></div></div>
+      </article>
+      <article class="product" data-category="papers">
+        <div class="product-cover cover-icse"><span class="digital-tag">PDF • SAMPLE</span><div class="cover-emoji">📘 ✍️</div><div class="cover-label">ICSE CLASS 10</div><div class="cover-sub">MATHEMATICS • PRACTICE PAPERS</div></div>
+        <div class="product-info"><span class="product-type">ICSE • Class 10</span><h3>Mathematics Practice Papers</h3><p>Exam-style practice set. Add the year, syllabus and solutions before publishing.</p><div class="product-bottom"><div class="price">₹199</div><button class="add-btn" onclick="addToCart('ICSE Class 10 Mathematics Practice Papers',199)">＋ Add to Cart</button></div></div>
+      </article>
+      <article class="product" data-category="papers">
+        <div class="product-cover cover-cbse"><span class="digital-tag">PDF • SAMPLE</span><div class="cover-emoji">🧪 📐</div><div class="cover-label">CBSE CLASS 10</div><div class="cover-sub">SCIENCE • PRACTICE PAPERS</div></div>
+        <div class="product-info"><span class="product-type">CBSE • Class 10</span><h3>Science Practice Papers</h3><p>Practice questions with space for answers and optional solutions.</p><div class="product-bottom"><div class="price">₹199</div><button class="add-btn" onclick="addToCart('CBSE Class 10 Science Practice Papers',199)">＋ Add to Cart</button></div></div>
+      </article>
+      <article class="product" data-category="papers">
+        <div class="product-cover cover-maths"><span class="digital-tag">PDF • SAMPLE</span><div class="cover-emoji">📏 ➗ 📊</div><div class="cover-label">CLASS 9 MATHS</div><div class="cover-sub">REVISION & PRACTICE</div></div>
+        <div class="product-info"><span class="product-type">ICSE / CBSE • Class 9</span><h3>Class 9 Maths Revision Pack</h3><p>Topic-wise practice worksheets to strengthen concepts before exams.</p><div class="product-bottom"><div class="price">₹99</div><button class="add-btn" onclick="addToCart('Class 9 Maths Revision Pack',99)">＋ Add to Cart</button></div></div>
+      </article>
+      <article class="product" data-category="study">
+        <div class="product-cover cover-icse"><span class="digital-tag">DIGITAL PDF</span><div class="cover-emoji">⚡ 📓 💡</div><div class="cover-label">QUICK REVISION</div><div class="cover-sub">FORMULAS & KEY CONCEPTS</div></div>
+        <div class="product-info"><span class="product-type">Study Resources</span><h3>Maths Formula Revision Sheets</h3><p>Concise revision pages for quick practice and recap.</p><div class="product-bottom"><div class="price">₹79</div><button class="add-btn" onclick="addToCart('Maths Formula Revision Sheets',79)">＋ Add to Cart</button></div></div>
+      </article>
+      <article class="product" data-category="activity">
+        <div class="product-cover cover-unicorn"><span class="digital-tag">DIGITAL BOOK</span><div class="cover-emoji">🔤 🔢 🖍️</div><div class="cover-label">TRACE & LEARN</div><div class="cover-sub">LETTERS • NUMBERS • SHAPES</div></div>
+        <div class="product-info"><span class="product-type">Activity Books</span><h3>Early Learning Workbook</h3><p>Tracing and beginner activities for preschool and early primary.</p><div class="product-bottom"><div class="price">₹129</div><button class="add-btn" onclick="addToCart('Early Learning Workbook',129)">＋ Add to Cart</button></div></div>
+      </article>
+    </div>
+    <p class="notice">Demo storefront: product names, descriptions and prices are examples. Add your original files and confirm syllabus, edition and pricing before publishing.</p>
+  </div>
+</section>
+
+<section class="why" id="why">
+  <div class="benefits">
+    <div class="benefit"><div class="benefit-icon">⚡</div><div><strong>Digital Convenience</strong><span>Resources designed for quick access.</span></div></div>
+    <div class="benefit"><div class="benefit-icon">🖨️</div><div><strong>Print or Use on Screen</strong><span>PDF-friendly resources where suitable.</span></div></div>
+    <div class="benefit"><div class="benefit-icon">💛</div><div><strong>Student-Friendly Prices</strong><span>Useful learning materials at fair prices.</span></div></div>
+    <div class="benefit"><div class="benefit-icon">📚</div><div><strong>Made for Learning</strong><span>Creative books and exam practice in one place.</span></div></div>
+  </div>
+</section>
+
+<section class="callout" id="contact">
+  <div class="callout-inner"><div><h2>Ready to learn, practise and create?</h2><p>Explore digital books for children and exam resources for students.<br>Questions about a product? Get in touch with our team.</p></div><a class="primary" href="mailto:hello@example.com?subject=Toppers%20Books%20Enquiry">Contact Us →</a></div>
+</section>
+
+<footer>
+  <div class="footer-inner">
+    <div><a class="brand" href="#home" style="color:white"><span class="brand-mark">📚</span><span>Toppers Books<small style="color:#c6d6e8">LEARN • GROW • SUCCEED</small></span></a><p>Digital books and study resources for curious minds.</p></div>
+    <div class="footer-links"><a href="#home">Home</a><a href="#categories">Kids’ Books</a><a href="#products">Board Papers</a><a href="#contact">Contact</a></div>
+    <div><p>Help & Support<br><a href="mailto:hello@example.com">hello@example.com</a></p></div>
+  </div>
+  <div class="copyright">© <span id="year"></span> Toppers Books. All rights reserved. <span style="float:right">Privacy • Terms • Refund Policy</span></div>
+</footer>
+
+<div class="cart-panel" id="cartPanel" role="status" aria-live="polite">
+  <div><strong id="cartSummary">Your cart is empty</strong><div class="notice" style="margin:3px 0 0">Checkout is not connected yet.</div></div>
+  <button onclick="showCart()">View Cart</button>
+  <button onclick="clearCart()" style="background:#e8eef5;color:#17365c">Clear</button>
+</div>
+
+<script>
+const cart = [];
+const navlinks = document.getElementById('navlinks');
+document.getElementById('menuButton').addEventListener('click',()=>navlinks.classList.toggle('open'));
+navlinks.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>navlinks.classList.remove('open')));
+document.getElementById('year').textContent = new Date().getFullYear();
+
+function setFilter(category){
+  document.querySelectorAll('.filter').forEach(b=>b.classList.toggle('active',b.dataset.filter===category));
+  document.querySelectorAll('.product').forEach(p=>p.style.display=(category==='all'||p.dataset.category===category)?'flex':'none');
+  document.getElementById('products').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function addToCart(name,price){
+  cart.push({name,price});
+  document.getElementById('cartCount').textContent=cart.length;
+  const total=cart.reduce((sum,item)=>sum+item.price,0);
+  document.getElementById('cartSummary').textContent=cart.length+' item(s) • ₹'+total;
+  document.getElementById('cartPanel').classList.add('show');
+}
+function showCart(){
+  if(!cart.length){alert('Your cart is empty.');return;}
+  const lines=cart.map((item,i)=>(i+1)+'. '+item.name+' — ₹'+item.price).join('\\n');
+  const total=cart.reduce((sum,item)=>sum+item.price,0);
+  alert('DEMO CART\\n\\n'+lines+'\\n\\nTotal: ₹'+total+'\\n\\nCheckout/payment is not connected yet.');
+}
+function clearCart(){
+  cart.length=0;
+  document.getElementById('cartCount').textContent='0';
+  document.getElementById('cartSummary').textContent='Your cart is empty';
+  document.getElementById('cartPanel').classList.remove('show');
+}
+document.getElementById('cartButton').addEventListener('click',showCart);
+</script>
+</body>
+</html>
