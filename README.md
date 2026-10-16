@@ -52,6 +52,31 @@ For a separate environment, all three `FIREBASE_API_KEY`, `FIREBASE_PROJECT_ID`,
 temporarily disable sign-in and checkout. Never add a service-account private key.
 While the store is closed and D1 is not bound, a verified account sees an empty shelf.
 
+## Customer profiles
+
+Email registration collects full name, Indian mobile number, email and password.
+Registration requires the D1 profile binding to be configured so the form never
+claims to have saved data with nowhere to store it. Existing Google/email sign-in
+continues to work while profile storage is being connected.
+
+After Google sign-in, the customer completes any missing name/mobile details.
+My Books includes a My profile form for later edits. The private D1
+`customer_profiles` table is keyed by the cryptographically verified Firebase UID.
+Email is taken from the token; form-supplied UID/email cannot select another user.
+Signed-in, unverified email users may save only their own profile, but still cannot
+purchase or read until email verification completes. Phone numbers are explicitly
+not SMS-verified. No contact details are saved in localStorage.
+
+New D1 database: apply the full `schema.sql`. Existing D1 database: apply
+`migrations/0001-customer-profiles.sql`. Bind the database as `DB` in the Pages
+project's production settings, then redeploy. Confirm `/api/config` reports
+`profileEnabled:true`, test a signup and Google profile, and check saving persists
+after signing out and back in. The D1 binding is not yet connected by this commit.
+
+Checkout uses the saved server profile as the watermark identity. The buyer sees
+these details and may edit the profile before payment. Each order snapshots them;
+later profile edits do not rewrite previously purchased copies.
+
 Email-link login was replaced because Spark permits only 5 sign-in link emails/day.
 Verification/reset mail also has quotas; check current Firebase limits and any
 upgraded plan costs in the account. Mobile numbers are collected

@@ -24,22 +24,26 @@ export function priceFor(coupon = '') {
   if (code && code !== 'TOPPERS50') fail(400, 'This coupon is not valid.');
   return { amount: code ? 14900 : 19900, coupon: code || null };
 }
-export function buyerDetails(body) {
+export function profileDetails(body) {
   const name = typeof body.name === 'string' ? body.name.trim().replace(/\s+/g, ' ') : '';
   const raw = typeof body.phone === 'string' ? body.phone.replace(/[\s()+-]/g, '') : '';
   const phone = raw.startsWith('91') && raw.length === 12 ? raw.slice(2) : raw;
   if (name.length < 2 || name.length > 80 || /[\x00-\x1f<>]/.test(name)) fail(400, 'Enter a reader name between 2 and 80 characters.');
   if (!/^[6-9]\d{9}$/.test(phone)) fail(400, 'Enter a valid 10-digit Indian mobile number.');
-  if (body.consent !== true) fail(400, 'Accept the online access terms and personal watermark before paying.');
   return { name, phone };
+}
+export function buyerDetails(body) {
+  const details = profileDetails(body);
+  if (body.consent !== true) fail(400, 'Accept the online access terms and personal watermark before paying.');
+  return details;
 }
 export function xml(value) { return String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[character])); }
 function unbase64url(value) { const padded = value.replace(/-/g, '+').replace(/_/g, '/'); return Uint8Array.from(atob(padded.padEnd(Math.ceil(padded.length / 4) * 4, '=')), character => character.charCodeAt(0)); }
-export function validateClaims(claims, projectId, now = Math.floor(Date.now() / 1000)) {
-  if (!projectId || claims.aud !== projectId || claims.iss !== `https://securetoken.google.com/${projectId}` || typeof claims.sub !== 'string' || !claims.sub || claims.sub.length > 128 || !Number.isFinite(claims.exp) || claims.exp <= now || !Number.isFinite(claims.iat) || claims.iat > now || !Number.isFinite(claims.auth_time) || claims.auth_time > now || claims.email_verified !== true || typeof claims.email !== 'string') fail(401, 'Please sign in again with a verified email address.');
+export function validateClaims(claims, projectId, now = Math.floor(Date.now() / 1000), requireVerified = true) {
+  if (!projectId || claims.aud !== projectId || claims.iss !== `https://securetoken.google.com/${projectId}` || typeof claims.sub !== 'string' || !claims.sub || claims.sub.length > 128 || !Number.isFinite(claims.exp) || claims.exp <= now || !Number.isFinite(claims.iat) || claims.iat > now || !Number.isFinite(claims.auth_time) || claims.auth_time > now || (requireVerified && claims.email_verified !== true) || typeof claims.email !== 'string') fail(401, 'Please sign in again with a verified email address.');
   return { uid: claims.sub, email: claims.email };
 }
-async function authenticate(request, env) {
+async function authenticate(request, env, requireVerified = true) {
   const token = request.headers.get('Authorization')?.match(/^Bearer ([A-Za-z0-9_.-]+)$/)?.[1];
   if (!token) fail(401, 'Sign in to access your books.');
   if (env.AUTH_DISABLED === 'true') fail(503, 'Customer sign-in is temporarily unavailable.');
@@ -56,7 +60,7 @@ async function authenticate(request, env) {
   const jwk = cachedKeys.find(key => key.kid === header.kid); if (!jwk) fail(401, 'Unknown sign-in token.');
   const key = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
   if (!await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, unbase64url(parts[2]), encoder.encode(parts[0] + '.' + parts[1]))) fail(401, 'Invalid sign-in signature.');
-  return validateClaims(claims, firebaseSettings(env).projectId);
+  return validateClaims(claims, firebaseSettings(env).projectId, Math.floor(Date.now() / 1000), requireVerified);
 }
 export async function checkSignature(secret, value, signature) {
   if (!secret || typeof signature !== 'string' || !/^[a-fA-F0-9]{64}$/.test(signature)) return false;
@@ -78,13 +82,33 @@ async function publicConfig(env) {
   const authEnabled = env.AUTH_DISABLED !== 'true' && !!(firebase.apiKey && firebase.projectId && firebase.authDomain);
   let salesOpen = false;
   if (salesEnabled(env)) { const book = await bookRecord(env); salesOpen = book?.is_ready === 1 && book.page_count > 0; }
-  return json({ authEnabled, salesOpen, firebase: authEnabled ? firebase : null });
+  return json({ authEnabled, profileEnabled: !!env.DB, salesOpen, firebase: authEnabled ? firebase : null });
+}
+async function profile(request, env, user) {
+  if (!env.DB) fail(503, 'Profile saving is temporarily unavailable. Please try again shortly.');
+  if (request.method === 'GET') {
+    const saved = await db(env).prepare('SELECT name, phone, phone_verified FROM customer_profiles WHERE uid = ?').bind(user.uid).first();
+    return json({ profile: saved ? { name: saved.name, phone: saved.phone, email: user.email, phoneVerified: saved.phone_verified === 1 } : null });
+  }
+  const body = await bodyJson(request);
+  const details = profileDetails(body);
+  if (body.consent !== true) fail(400, 'Accept the Terms and Privacy Policy to save your profile.');
+  const now = Math.floor(Date.now() / 1000);
+  // uid/email always come from the signed Firebase token, never from form fields.
+  // A number entered by the user is not an SMS-verified phone identity.
+  await db(env).prepare('INSERT INTO customer_profiles (uid, email, name, phone, phone_verified, created_at, updated_at, consent_at) VALUES (?, ?, ?, ?, 0, ?, ?, ?) ON CONFLICT(uid) DO UPDATE SET email = excluded.email, name = excluded.name, phone = excluded.phone, phone_verified = CASE WHEN customer_profiles.phone = excluded.phone THEN customer_profiles.phone_verified ELSE 0 END, updated_at = excluded.updated_at, consent_at = excluded.consent_at').bind(user.uid, user.email, details.name, details.phone, now, now, now).run();
+  return json({ saved: true, profile: { ...details, email: user.email, phoneVerified: false } });
 }
 async function createOrder(request, env, user) {
   if (!salesEnabled(env)) fail(409, 'The complete book is still in preparation. Purchases are not open yet.');
   const book = await bookRecord(env); if (!book || book.is_ready !== 1 || book.page_count < 1) fail(409, 'The complete book is not available for purchase yet.');
   const body = await bodyJson(request); if (body.bookId !== BOOK_ID) fail(400, 'Unknown book.');
-  const buyer = buyerDetails(body); const pricing = priceFor(body.coupon); const now = Math.floor(Date.now() / 1000);
+  const submittedBuyer = buyerDetails(body);
+  const savedProfile = await db(env).prepare('SELECT name, phone FROM customer_profiles WHERE uid = ?').bind(user.uid).first();
+  if (!savedProfile) fail(409, 'Complete your name and mobile number in your profile before purchasing.');
+  if (submittedBuyer.name !== savedProfile.name || submittedBuyer.phone !== savedProfile.phone) fail(409, 'Your profile has changed. Reopen checkout and confirm the updated details.');
+  const buyer = { name: savedProfile.name, phone: savedProfile.phone };
+  const pricing = priceFor(body.coupon); const now = Math.floor(Date.now() / 1000);
   const existing = await db(env).prepare('SELECT order_id FROM entitlements WHERE uid = ? AND book_id = ? AND revoked = 0 AND expires_at > ?').bind(user.uid, BOOK_ID, now).first();
   if (existing) fail(409, 'You already have access to this book. Open My Books to read it.');
   const pending = await db(env).prepare("SELECT id FROM orders WHERE uid = ? AND book_id = ? AND status = 'created' AND created_at > ?").bind(user.uid, BOOK_ID, now - 1800).first();
@@ -182,10 +206,12 @@ export async function onRequest({ request, env }) {
     const route = path[0]; const method = request.method;
     if (route === 'config' && path.length === 1 && method === 'GET') return await publicConfig(env);
     if (route === 'webhook' && path.length === 1 && method === 'POST') return await webhook(request, env);
-    if (!['orders', 'verify', 'library', 'read'].includes(route)) fail(404, 'Endpoint not found.');
+    if (!['orders', 'verify', 'library', 'read', 'profile'].includes(route)) fail(404, 'Endpoint not found.');
     if ((['orders', 'verify'].includes(route) && method !== 'POST') || (['library', 'read'].includes(route) && method !== 'GET')) fail(405, 'Method not allowed.');
+    if (route === 'profile' && !['GET', 'POST'].includes(method)) fail(405, 'Method not allowed.');
     if (method === 'POST' && request.headers.get('Origin') !== new URL(request.url).origin) fail(403, 'Open checkout from the Toppers Books website.');
-    const user = await authenticate(request, env);
+    const user = await authenticate(request, env, route !== 'profile');
+    if (route === 'profile' && path.length === 1) return await profile(request, env, user);
     if (route === 'orders' && path.length === 1) return await createOrder(request, env, user);
     if (route === 'verify' && path.length === 1) return await verifyOrder(request, env, user);
     if (route === 'library' && path.length === 1) return await library(env, user);

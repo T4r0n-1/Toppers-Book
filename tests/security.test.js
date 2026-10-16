@@ -1,7 +1,7 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
-import { onRequest, priceFor, buyerDetails, validateClaims, validatePayment, checkSignature, watermarkedPage } from '../functions/api/[[path]].js';
+import { onRequest, priceFor, buyerDetails, profileDetails, validateClaims, validatePayment, checkSignature, watermarkedPage } from '../functions/api/[[path]].js';
 
 const now = Math.floor(Date.now() / 1000);
 const claims = { aud: 'test-project', iss: 'https://securetoken.google.com/test-project', sub: 'buyer-a', exp: now + 3600, iat: now - 60, auth_time: now - 60, email: 'buyer@example.test', email_verified: true };
@@ -37,3 +37,28 @@ test('page IDs cannot escape the private book object prefix', async () => { cons
 test('watermark embeds escaped identity and never interprets buyer input as markup', () => { const page = watermarkedPage('AA==', 'Buyer & <script>', '8384871987', 'order_test', 1); assert.ok(page.includes('Buyer &amp; &lt;script&gt;')); assert.ok(page.includes('8384871987')); assert.ok(!page.includes('<script>')); assert.equal((page.match(/rotate\(-25/g) || []).length, 4); });
 test('order ownership is checked before a gateway confirmation', async () => { const initialCalls = gatewayCalls; const env = { FIREBASE_PROJECT_ID: 'test-project', DB: { prepare() { return { bind(id, uid) { assert.equal(uid, 'buyer-a'); return this; }, async first() { return null; } }; } } }; const response = await context(request('verify', 'POST', { razorpay_order_id: 'order_other', razorpay_payment_id: 'pay_other', razorpay_signature: 'a'.repeat(64) }, await token()), env); assert.equal(response.status, 404); assert.equal(gatewayCalls, initialCalls); });
 test('captured payment retries use an idempotent entitlement write', async () => { const batches = []; const order = { id: 'order_demo', uid: 'buyer-a', book_id: 'cbse10-maths-standard', amount: 14900, reader_name: 'Buyer', phone: '8384871987', status: 'paid', paid_at: now - 300 }; const env = { FIREBASE_PROJECT_ID: 'test-project', RAZORPAY_KEY_ID: 'rzp_live_example', RAZORPAY_KEY_SECRET: 'secret', DB: { prepare(sql) { return { sql, bind(...args) { this.args = args; return this; }, async first() { return order; } }; }, async batch(statements) { batches.push(statements); } } }; paymentResponse = { id: 'pay_demo', order_id: order.id, status: 'captured', captured: true, amount: 14900, currency: 'INR', amount_refunded: 0, created_at: now - 300 }; const signature = createHmac('sha256', 'secret').update('order_demo|pay_demo').digest('hex'); const body = { razorpay_order_id: order.id, razorpay_payment_id: 'pay_demo', razorpay_signature: signature }; for (let i = 0; i < 2; i++) assert.equal((await context(request('verify', 'POST', body, await token()), env)).status, 200); assert.equal(batches.length, 2); for (const statements of batches) { assert.equal(statements[0].args[1], now - 300); assert.match(statements[1].sql, /ON CONFLICT\(order_id\) DO NOTHING/); assert.match(statements[1].sql, /status = 'paid'/); } });
+
+test('profile persistence uses the signed UID/email and never caller-supplied identity', async () => {
+  let saved;
+  const env = { FIREBASE_PROJECT_ID: 'test-project', DB: { prepare() { return { bind(...args) { this.args = args; return this; }, async run() { saved = this.args; }, async first() { assert.equal(this.args[0], 'buyer-a'); return saved ? { name: saved[2], phone: saved[3], phone_verified: 0 } : null; } }; } } };
+  const response = await context(request('profile', 'POST', { uid: 'victim', email: 'victim@example.test', name: 'Buyer Name', phone: '+91 83848 71987', consent: true, phoneVerified: true }, await token({ email_verified: false })), env);
+  assert.equal(response.status, 200); assert.equal(saved[0], 'buyer-a'); assert.equal(saved[1], 'buyer@example.test');
+  const returned = await response.json(); assert.equal(returned.profile.phoneVerified, false);
+  const read = await context(request('profile?uid=victim', 'GET', undefined, await token()), env);
+  assert.equal(read.status, 200); assert.equal((await read.json()).profile.name, 'Buyer Name');
+});
+
+test('profile-only access for an unverified account cannot read the library or books', async () => {
+  const unverified = await token({ email_verified: false });
+  for (const path of ['library', 'read/cbse10-maths-standard/1']) assert.equal((await context(request(path, 'GET', undefined, unverified), { FIREBASE_PROJECT_ID: 'test-project' })).status, 401);
+});
+
+test('profile save fails honestly without storage and rejects missing consent', async () => {
+  const authToken = await token();
+  const body = { name: 'Buyer Name', phone: '8384871987', consent: true };
+  const response = await context(request('profile', 'POST', body, authToken), { FIREBASE_PROJECT_ID: 'test-project' });
+  assert.equal(response.status, 503); assert.ok(!(await response.text()).includes('"saved":true'));
+  const env = { FIREBASE_PROJECT_ID: 'test-project', DB: {} };
+  assert.equal((await context(request('profile', 'POST', { ...body, consent: false }, authToken), env)).status, 400);
+  assert.throws(() => profileDetails({ name: '<img>', phone: '8384871987' }));
+});

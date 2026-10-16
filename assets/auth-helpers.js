@@ -42,3 +42,12 @@ export async function passwordReset(sdk, auth, email, continueUrl) {
   // Never disclose whether the address is registered.
   return 'If an account uses this email, a password reset link will arrive shortly. Check your inbox and spam folder.';
 }
+
+export function profileInput(nameValue, phoneValue) {
+  const name = String(nameValue || '').trim().replace(/\s+/g, ' ');
+  const raw = String(phoneValue || '').replace(/[\s()+-]/g, '');
+  const phone = raw.startsWith('91') && raw.length === 12 ? raw.slice(2) : raw;
+  if (name.length < 2 || name.length > 80 || /[\x00-\x1f<>]/.test(name)) throw new Error('Enter your full name using 2 to 80 characters.');
+  if (!/^[6-9]\d{9}$/.test(phone)) throw new Error('Enter a valid 10-digit Indian mobile number.');
+  return { name, phone };
+}

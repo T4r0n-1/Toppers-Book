@@ -1,4 +1,4 @@
-import { authMessage, emailAuthentication, passwordReset } from './auth-helpers.js';
+import { authMessage, emailAuthentication, passwordReset, profileInput } from './auth-helpers.js';
 const $ = (selector, parent = document) => parent.querySelector(selector);
 const $$ = (selector, parent = document) => [...parent.querySelectorAll(selector)];
 const chapters = ['Real Numbers', 'Polynomials', 'Pair of Linear Equations in Two Variables', 'Quadratic Equations', 'Arithmetic Progressions', 'Triangles', 'Coordinate Geometry', 'Introduction to Trigonometry', 'Some Applications of Trigonometry', 'Circles', 'Areas Related to Circles', 'Surface Areas and Volumes', 'Statistics', 'Probability'];
@@ -18,6 +18,7 @@ const samples = [
 let config = { authEnabled: false, salesOpen: false };
 let auth, authSDK, currentUser = null, activeBook = null, page = 0, zoom = 1, toastTimer, readerRequest = 0;
 let loginMode = 'signin', authBusy = false, verificationSentAt = 0;
+let currentProfile = null, profileOwner = null, profileRequest = 0, signupDraft = null;
 function safeStorage(action, key, value) { try { return action === 'get' ? localStorage.getItem(key) : action === 'set' ? localStorage.setItem(key, value) : localStorage.removeItem(key); } catch { return null; } }
 function notify(message) { $('#toast').textContent = message; $('#toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { $('#toast').hidden = true; }, 6500); }
 function openDialog(id) { const element = $(id); if (!element.open) element.showModal(); }
@@ -47,8 +48,12 @@ document.addEventListener('click', async event => {
   if (action === 'library') location.hash = 'library';
   if (action === 'home') location.hash = 'home';
   if (action === 'preview') startReader();
-  if (action === 'logout' && auth) { await authSDK.signOut(auth); notify('You have signed out.'); }
-  if (action === 'checkout') { if (!currentUser?.emailVerified) openDialog('#login-dialog'); else openDialog('#checkout-dialog'); }
+  if (action === 'logout' && auth) { await authSDK.signOut(auth); signupDraft = null; if ($('#profile-dialog').open) $('#profile-dialog').close(); notify('You have signed out.'); }
+  if (action === 'profile') await openProfile();
+  if (action === 'checkout') {
+    if (!currentUser?.emailVerified) openDialog('#login-dialog');
+    else { await loadProfile(); if (!currentProfile) { await openProfile(); return; } $('#buyer-name').value = currentProfile.name; $('#buyer-phone').value = currentProfile.phone; openDialog('#checkout-dialog'); }
+  }
 });
 $$('dialog').forEach(dialog => dialog.addEventListener('click', event => { if (event.target !== dialog) return; const rect = dialog.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close(); }));
 function resumeKey() { return activeBook && currentUser ? `toppers-reader:${currentUser.uid}:${activeBook.bookId}` : 'toppers-demo-page'; }
@@ -88,8 +93,70 @@ function emptyLibrary(title, description, action, text) {
   $('#library-content h2').textContent = title; $('#library-content p').textContent = description;
   const button = $('#library-content button'); button.dataset.action = action; button.textContent = text;
 }
+function renderProfileSummary() {
+  const container = $('#profile-summary');
+  container.hidden = !currentUser;
+  if (!currentUser) { container.replaceChildren(); return; }
+  container.replaceChildren();
+  const text = document.createElement('span');
+  text.textContent = currentProfile && profileOwner === currentUser.uid ? `${currentProfile.name} · +91 ${currentProfile.phone}` : 'Add your name and mobile number to complete your profile.';
+  const button = document.createElement('button'); button.className = 'inline-button'; button.dataset.action = 'profile'; button.textContent = currentProfile ? 'Edit profile' : 'Complete profile';
+  container.append(text, button);
+}
+async function loadProfile(force = false) {
+  const user = currentUser;
+  if (profileOwner !== user?.uid) { currentProfile = null; profileOwner = null; }
+  if (!user || !config.profileEnabled) { renderProfileSummary(); return null; }
+  if (!force && currentProfile && profileOwner === user.uid) return currentProfile;
+  const requestId = ++profileRequest;
+  try {
+    const result = await api('profile');
+    if (currentUser?.uid !== user.uid || requestId !== profileRequest) return null;
+    currentProfile = result.profile; profileOwner = user.uid; renderProfileSummary();
+    return currentProfile;
+  } catch { return null; }
+}
+async function saveProfileDetails(details) {
+  const uid = currentUser?.uid;
+  if (!uid || !config.profileEnabled) throw new Error('Profile saving is temporarily unavailable. Please try again shortly.');
+  const result = await api('profile', { method: 'POST', body: JSON.stringify({ ...details, consent: true }) });
+  if (currentUser?.uid !== uid) throw new Error('Your account changed. Please sign in and try again.');
+  ++profileRequest; currentProfile = result.profile; profileOwner = uid; signupDraft = null; renderProfileSummary();
+  return currentProfile;
+}
+async function openProfile() {
+  if (!currentUser) { openDialog('#login-dialog'); return; }
+  if ($('#checkout-dialog').open) $('#checkout-dialog').close();
+  await loadProfile();
+  if (!currentUser) return;
+  const draft = signupDraft?.email === currentUser.email ? signupDraft : null;
+  $('#profile-email').value = currentUser.email || '';
+  $('#profile-name').value = currentProfile?.name || draft?.name || currentUser.displayName || '';
+  $('#profile-phone').value = currentProfile?.phone || draft?.phone || '';
+  $('#profile-consent').checked = false;
+  $('#profile-title').textContent = currentProfile ? 'Your profile.' : 'Complete your profile.';
+  $('#profile-status').textContent = config.profileEnabled ? 'These details will be saved privately to your account. Changes apply to future purchases.' : 'Profile saving will be available shortly. You can already use your account to sign in.';
+  $('#save-profile').disabled = !config.profileEnabled;
+  openDialog('#profile-dialog');
+}
+$('#profile-form').addEventListener('submit', async event => {
+  event.preventDefault(); if (!currentUser || !$('#profile-form').reportValidity()) return;
+  $('#save-profile').disabled = true;
+  try {
+    const details = profileInput($('#profile-name').value, $('#profile-phone').value);
+    await saveProfileDetails(details);
+    // Display name is a convenience; the private profile remains authoritative.
+    try { await authSDK.updateProfile(currentUser, { displayName: details.name }); } catch { /* A retry is not needed for a saved private profile. */ }
+    $('#profile-dialog').close(); notify('Your name and mobile number have been saved.');
+    if (location.hash === '#library') showLibrary();
+  } catch (error) { $('#profile-status').textContent = error.message || 'Your profile could not be saved. Please try again.'; }
+  finally { $('#save-profile').disabled = !config.profileEnabled; }
+});
+$('#profile-dialog').addEventListener('close', () => { $('#profile-form').reset(); });
 async function showLibrary() {
   $('#logout-button').hidden = !currentUser;
+  $('#profile-button').hidden = !currentUser;
+  renderProfileSummary();
   if (!currentUser) { emptyLibrary('Your bookshelf starts here.', config.authEnabled ? 'Sign in with the same account you use at checkout to find your purchased books.' : 'Our first complete book is being prepared. Customer sign-in and your personal bookshelf will open when the store is ready.', 'login', config.authEnabled ? 'Sign in to My Books →' : 'View sign-in options →'); return; }
   if (!currentUser.emailVerified) { emptyLibrary('Verify your email first.', 'Open the verification email in your inbox, then return here to continue. You can resend it from your account screen.', 'login', 'Verify my email →'); return; }
   $('#library-content').textContent = 'Loading your bookshelf…';
@@ -117,6 +184,7 @@ function setAuthBusy(busy) {
   authBusy = busy;
   ['google-login', 'login-email', 'login-password', 'email-login', 'forgot-password', 'show-password'].forEach(id => { $('#' + id).disabled = busy || !auth; });
   $$('[data-auth-mode]').forEach(button => { button.disabled = busy || !auth; });
+  ['signup-name', 'signup-phone', 'signup-consent'].forEach(id => { $('#' + id).disabled = busy || !auth || loginMode !== 'signup'; });
 }
 function renderAuthState() {
   const unverified = !!currentUser && !currentUser.emailVerified;
@@ -134,6 +202,9 @@ function setLoginMode(mode) {
   loginMode = mode;
   $$('[data-auth-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.authMode === mode)));
   const signup = mode === 'signup';
+  $('#signup-details').hidden = !signup;
+  $('#signup-consent-label').hidden = !signup;
+  ['signup-name', 'signup-phone', 'signup-consent'].forEach(id => { $('#' + id).required = signup; $('#' + id).disabled = !signup || !auth; });
   $('#login-password').value = '';
   $('#login-password').type = 'password';
   $('#login-password').autocomplete = signup ? 'new-password' : 'current-password';
@@ -155,7 +226,7 @@ $('#show-password').addEventListener('click', () => {
   $('#show-password').setAttribute('aria-label', shown ? 'Hide password' : 'Show password');
 });
 $('#login-dialog').addEventListener('close', () => { $('#login-password').value = ''; $('#login-password').type = 'password'; $('#show-password').textContent = 'Show'; $('#show-password').setAttribute('aria-pressed', 'false'); $('#show-password').setAttribute('aria-label', 'Show password'); });
-function continueToBooks() { $('#login-dialog').close(); if (location.hash === '#library') showLibrary(); else location.hash = 'library'; }
+async function continueToBooks() { $('#login-dialog').close(); if (location.hash === '#library') showLibrary(); else location.hash = 'library'; await loadProfile(); if (!currentProfile && currentUser && config.profileEnabled) await openProfile(); }
 $('#google-login').addEventListener('click', async () => {
   if (!auth || authBusy) return; setAuthBusy(true);
   try { const result = await authSDK.signInWithPopup(auth, new authSDK.GoogleAuthProvider()); currentUser = result.user; renderAuthState(); if (currentUser.emailVerified) continueToBooks(); }
@@ -166,13 +237,25 @@ $('#email-login-form').addEventListener('submit', async event => {
   event.preventDefault(); if (!auth || authBusy) return;
   if (!$('#email-login-form').reportValidity()) return;
   const email = $('#login-email').value.trim();
+  if (loginMode === 'signup') {
+    if (!config.profileEnabled) { $('#login-status').textContent = 'Account registration is being prepared. Please try again shortly. Existing users can sign in.'; return; }
+    try { signupDraft = { ...profileInput($('#signup-name').value, $('#signup-phone').value), email }; }
+    catch (error) { $('#login-status').textContent = error.message; return; }
+  }
   setAuthBusy(true);
   try {
     const result = await emailAuthentication(authSDK, auth, loginMode, email, $('#login-password').value, location.origin + '/#library');
     $('#login-password').value = '';
-    currentUser = result.user; renderAuthState();
+    currentUser = result.user;
+    let profileError = null;
+    if (loginMode === 'signup' && signupDraft?.email === email) {
+      try { const details = { name: signupDraft.name, phone: signupDraft.phone }; await saveProfileDetails(details); try { await authSDK.updateProfile(currentUser, { displayName: details.name }); } catch { /* Private profile is saved. */ } }
+      catch (error) { profileError = error.message; }
+    }
+    renderAuthState();
     if (result.verificationSent) { verificationSentAt = Date.now(); $('#login-status').textContent = 'Verification email sent. Open it, verify your email, then return here.'; }
     else if (!currentUser.emailVerified && loginMode === 'signup') $('#login-status').textContent = 'Your account was created. Use Resend verification email to verify your address.';
+    if (profileError) $('#login-status').textContent = 'Your account was created, but your profile could not be saved. After signing in, open My profile to complete it.';
     if (currentUser.emailVerified) continueToBooks();
   } catch (error) { $('#login-status').textContent = authMessage(error); }
   finally { setAuthBusy(false); }
@@ -232,9 +315,11 @@ async function initialise() {
         const previousUid = currentUser?.uid;
         currentUser = user;
         $('#account-button').textContent = user ? 'My account ↗' : 'Sign in ↗';
-        if (previousUid !== user?.uid) verificationSentAt = 0;
+        if (previousUid !== user?.uid) { verificationSentAt = 0; ++profileRequest; currentProfile = null; profileOwner = null; }
         renderAuthState();
         if (location.hash === '#library') showLibrary();
+        if (user) loadProfile();
+        else renderProfileSummary();
       });
       if (location.hash === '#library') showLibrary();
     } catch { $('#login-status').textContent = 'Sign-in is temporarily unavailable. Please try again later.'; }
