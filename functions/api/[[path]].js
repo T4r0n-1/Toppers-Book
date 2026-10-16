@@ -1,3 +1,4 @@
+import firebaseConfig from '../../assets/firebase-config.js';
 // Cloudflare Pages Functions. Paid assets are NEVER stored in the public checkout.
 const BOOK_ID = 'cbse10-maths-standard';
 const BOOK_TITLE = 'CBSE Class 10 Mathematics Standard (041)';
@@ -5,6 +6,14 @@ const YEAR = 365 * 24 * 60 * 60;
 const encoder = new TextEncoder();
 let cachedKeys = null;
 let keysExpire = 0;
+export function firebaseSettings(env) {
+  return {
+    ...firebaseConfig,
+    apiKey: env.FIREBASE_API_KEY || firebaseConfig.apiKey,
+    projectId: env.FIREBASE_PROJECT_ID || firebaseConfig.projectId,
+    authDomain: env.FIREBASE_AUTH_DOMAIN || firebaseConfig.authDomain
+  };
+}
 export class HttpError extends Error { constructor(status, message) { super(message); this.status = status; } }
 function fail(status, message) { throw new HttpError(status, message); }
 function json(data, status = 200) { return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store, private', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' } }); }
@@ -33,7 +42,7 @@ export function validateClaims(claims, projectId, now = Math.floor(Date.now() / 
 async function authenticate(request, env) {
   const token = request.headers.get('Authorization')?.match(/^Bearer ([A-Za-z0-9_.-]+)$/)?.[1];
   if (!token) fail(401, 'Sign in to access your books.');
-  if (!env.FIREBASE_PROJECT_ID) fail(503, 'Customer sign-in is not open yet.');
+  if (env.AUTH_DISABLED === 'true') fail(503, 'Customer sign-in is temporarily unavailable.');
   const parts = token.split('.'); if (parts.length !== 3) fail(401, 'Invalid sign-in token.');
   let header, claims;
   try { header = JSON.parse(new TextDecoder().decode(unbase64url(parts[0]))); claims = JSON.parse(new TextDecoder().decode(unbase64url(parts[1]))); } catch { fail(401, 'Invalid sign-in token.'); }
@@ -47,7 +56,7 @@ async function authenticate(request, env) {
   const jwk = cachedKeys.find(key => key.kid === header.kid); if (!jwk) fail(401, 'Unknown sign-in token.');
   const key = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
   if (!await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, unbase64url(parts[2]), encoder.encode(parts[0] + '.' + parts[1]))) fail(401, 'Invalid sign-in signature.');
-  return validateClaims(claims, env.FIREBASE_PROJECT_ID);
+  return validateClaims(claims, firebaseSettings(env).projectId);
 }
 export async function checkSignature(secret, value, signature) {
   if (!secret || typeof signature !== 'string' || !/^[a-fA-F0-9]{64}$/.test(signature)) return false;
@@ -62,13 +71,14 @@ async function gateway(env, path, options = {}) {
   if (!response.ok) fail(502, 'The payment service could not confirm this request. Please contact support before paying again.');
   return response.json();
 }
-function salesEnabled(env) { return env.SALES_OPEN === 'true' && !!env.DB && !!env.BOOKS && !!env.FIREBASE_PROJECT_ID && !!env.FIREBASE_API_KEY && !!env.FIREBASE_AUTH_DOMAIN && /^rzp_live_/.test(env.RAZORPAY_KEY_ID || '') && !!env.RAZORPAY_KEY_SECRET && !!env.RAZORPAY_WEBHOOK_SECRET; }
+function salesEnabled(env) { const firebase = firebaseSettings(env); return env.AUTH_DISABLED !== 'true' && env.SALES_OPEN === 'true' && !!env.DB && !!env.BOOKS && !!firebase.projectId && !!firebase.apiKey && !!firebase.authDomain && /^rzp_live_/.test(env.RAZORPAY_KEY_ID || '') && !!env.RAZORPAY_KEY_SECRET && !!env.RAZORPAY_WEBHOOK_SECRET; }
 async function bookRecord(env) { return db(env).prepare('SELECT * FROM books WHERE id = ?').bind(BOOK_ID).first(); }
 async function publicConfig(env) {
-  const authEnabled = !!(env.FIREBASE_API_KEY && env.FIREBASE_PROJECT_ID && env.FIREBASE_AUTH_DOMAIN);
+  const firebase = firebaseSettings(env);
+  const authEnabled = env.AUTH_DISABLED !== 'true' && !!(firebase.apiKey && firebase.projectId && firebase.authDomain);
   let salesOpen = false;
   if (salesEnabled(env)) { const book = await bookRecord(env); salesOpen = book?.is_ready === 1 && book.page_count > 0; }
-  return json({ authEnabled, salesOpen, firebase: authEnabled ? { apiKey: env.FIREBASE_API_KEY, projectId: env.FIREBASE_PROJECT_ID, authDomain: env.FIREBASE_AUTH_DOMAIN } : null });
+  return json({ authEnabled, salesOpen, firebase: authEnabled ? firebase : null });
 }
 async function createOrder(request, env, user) {
   if (!salesEnabled(env)) fail(409, 'The complete book is still in preparation. Purchases are not open yet.');
@@ -134,6 +144,7 @@ async function webhook(request, env) {
   return json({ received: true });
 }
 async function library(env, user) {
+  if (!env.DB && env.SALES_OPEN !== 'true') return json({ books: [], preparing: true });
   const now = Math.floor(Date.now() / 1000);
   const result = await db(env).prepare('SELECT e.book_id, MAX(e.expires_at) AS expires_at, b.title, b.page_count, b.chapters_json FROM entitlements e JOIN books b ON b.id = e.book_id WHERE e.uid = ? AND e.revoked = 0 GROUP BY e.book_id, b.title, b.page_count, b.chapters_json').bind(user.uid).all();
   return json({ books: (result.results || []).map(book => ({ bookId: book.book_id, title: book.title, pageCount: book.page_count, chapters: JSON.parse(book.chapters_json), expiresAt: book.expires_at, active: book.expires_at > now })) });

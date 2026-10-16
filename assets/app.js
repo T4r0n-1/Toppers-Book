@@ -1,3 +1,4 @@
+import { authMessage, emailAuthentication, passwordReset } from './auth-helpers.js';
 const $ = (selector, parent = document) => parent.querySelector(selector);
 const $$ = (selector, parent = document) => [...parent.querySelectorAll(selector)];
 const chapters = ['Real Numbers', 'Polynomials', 'Pair of Linear Equations in Two Variables', 'Quadratic Equations', 'Arithmetic Progressions', 'Triangles', 'Coordinate Geometry', 'Introduction to Trigonometry', 'Some Applications of Trigonometry', 'Circles', 'Areas Related to Circles', 'Surface Areas and Volumes', 'Statistics', 'Probability'];
@@ -5,7 +6,7 @@ const support = '<a href="mailto:codetoppers@gmail.com">codetoppers@gmail.com</a
 const operator = '<p><strong>Toppers Books is operated by GUPTA ENTERPRISES.</strong><br>Tajganj, Agra, Uttar Pradesh – 282001, India.<br>' + support + '</p>';
 const policies = {
   terms: { title: 'Terms & conditions', body: `${operator}<h3>Our digital books</h3><p>Toppers Books offers independent educational resources. We are not affiliated with or endorsed by CBSE. The current Mathematics book is in preparation; no advance payments are accepted.</p><h3>Purchase and personal access</h3><p>Once sales open, the book page will state the final contents, price and access period. A purchase provides a personal, non-transferable licence to read the purchased book online for 365 days from verified payment. It does not transfer copyright or provide a downloadable PDF. Access does not automatically renew.</p><h3>Your account and watermark</h3><p>Use accurate account and checkout details. Purchased reading pages are personalised with the reader name and mobile number provided at checkout. Do not share your account, copy, resell, publish or redistribute book content. Access may be restricted for misuse; contact support if you believe a restriction is incorrect.</p><h3>Availability and support</h3><p>An internet connection and a supported modern browser are required. Temporary interruptions can occur. Contact us about access problems, content errors or corrections. Educational resources support study and do not guarantee any exam result.</p><h3>Payments and policies</h3><p>Payments will be processed through Razorpay when checkout opens. Coupon eligibility and the final total will be displayed before payment. Our Privacy, Digital Access, and Refunds & Cancellations policies also apply. Nothing in these terms excludes applicable statutory rights.</p>` },
-  privacy: { title: 'Privacy policy', body: `${operator}<h3>Information we use</h3><p>When accounts and checkout open, we will use your sign-in email and identifier, reader name, mobile number, purchase and payment references, and access expiry to provide your account and purchased books. Google sign-in may also provide your profile name and picture. We use browser storage to keep sign-in state and your reading position.</p><h3>Personalised reading pages</h3><p>Your name and mobile number will appear in a watermark on your purchased reading pages to discourage redistribution. This will be disclosed before payment. Sharing a screenshot can reveal these details, so keep your reading pages private.</p><h3>Service providers</h3><p>We use Cloudflare for hosting and protected content. When enabled, Firebase Authentication will handle Google and email sign-in, and Razorpay will process payments. These providers process information under their own policies. We do not store card numbers, CVV or UPI PINs.</p><h3>Retention and your requests</h3><p>We retain account and purchase information as needed to provide access, resolve issues and meet applicable record-keeping requirements. Contact us to request correction or deletion. Some transaction records may need to be retained even after account deletion. We do not sell your personal information.</p><h3>Students and parents</h3><p>If you are under 18, ask a parent or guardian to manage the purchase and provide appropriate account and contact details.</p><h3>Contact</h3><p>For privacy questions or requests, email codetoppers@gmail.com.</p>` },
+  privacy: { title: 'Privacy policy', body: `${operator}<h3>Information we use</h3><p>When you create an account or make a purchase, we use your sign-in email and identifier, reader name, mobile number, purchase and payment references, and access expiry to provide your account and purchased books. Google sign-in may also provide your profile name and picture. We use browser storage to keep sign-in state and your reading position.</p><h3>Personalised reading pages</h3><p>Your name and mobile number will appear in a watermark on your purchased reading pages to discourage redistribution. This will be disclosed before payment. Sharing a screenshot can reveal these details, so keep your reading pages private.</p><h3>Service providers</h3><p>We use Cloudflare for hosting and protected content. Firebase Authentication handles Google and email/password sign-in. Passwords are handled by Firebase; we do not store them in our own database. Razorpay will process payments when checkout opens. These providers process information under their own policies. We do not store card numbers, CVV or UPI PINs.</p><h3>Retention and your requests</h3><p>We retain account and purchase information as needed to provide access, resolve issues and meet applicable record-keeping requirements. Contact us to request correction or deletion. Some transaction records may need to be retained even after account deletion. We do not sell your personal information.</p><h3>Students and parents</h3><p>If you are under 18, ask a parent or guardian to manage the purchase and provide appropriate account and contact details.</p><h3>Contact</h3><p>For privacy questions or requests, email codetoppers@gmail.com.</p>` },
   refunds: { title: 'Refunds & cancellations', body: `${operator}<h3>Current launch status</h3><p>The complete book is being prepared. Checkout is closed and no advance payment is required.</p><h3>After sales open</h3><p>Please check the book description, sample, online-only format and 365-day access period before paying. If you experience a duplicate payment, a payment without book access, a wrong product delivery or a material mismatch with the description, contact us with the order ID and issue details.</p><h3>Review and resolution</h3><p>We will review the transaction and work to restore the correct access or provide an appropriate refund. Requests based only on a change of mind after access has been provided will be reviewed individually. This policy does not limit rights available under applicable law.</p><h3>Cancellations and refunds</h3><p>Unpaid orders can be abandoned without a charge. For a paid order, contact support to request cancellation or a refund. Approved refunds are returned through the original payment method; bank and payment-provider processing times apply. Access associated with a fully refunded purchase will end.</p><h3>How to contact us</h3><p>Email codetoppers@gmail.com or WhatsApp +91 83848 71987. Never send your card details, CVV, UPI PIN or OTP.</p>` },
   delivery: { title: 'Digital access policy', body: `${operator}<h3>No physical delivery</h3><p>This is an online reading product. No printed book is shipped and no PDF download, print or offline access is included.</p><h3>When access begins</h3><p>After sales open, access will be granted to the signed-in buyer only after the backend verifies a captured payment. Closing a checkout window or seeing a payment screenshot does not by itself establish a purchase.</p><h3>Your reading period</h3><p>Purchased access lasts 365 days from verified successful payment. The expiry date will be shown in My Books. Sign in with the same account used for purchase. There is no automatic renewal.</p><h3>Personalisation and devices</h3><p>Reading pages carry the reader name and mobile number provided at checkout. Use a modern browser on your phone, tablet or computer and maintain an internet connection. Access is for the purchasing account only.</p><h3>If a payment is pending or access is missing</h3><p>Check My Books after signing in. If payment was deducted but the book remains unavailable, contact support with your order/payment reference. Avoid repeatedly paying for the same book while an earlier payment is being checked.</p>` }
 };
@@ -16,6 +17,7 @@ const samples = [
 ];
 let config = { authEnabled: false, salesOpen: false };
 let auth, authSDK, currentUser = null, activeBook = null, page = 0, zoom = 1, toastTimer, readerRequest = 0;
+let loginMode = 'signin', authBusy = false, verificationSentAt = 0;
 function safeStorage(action, key, value) { try { return action === 'get' ? localStorage.getItem(key) : action === 'set' ? localStorage.setItem(key, value) : localStorage.removeItem(key); } catch { return null; } }
 function notify(message) { $('#toast').textContent = message; $('#toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { $('#toast').hidden = true; }, 6500); }
 function openDialog(id) { const element = $(id); if (!element.open) element.showModal(); }
@@ -41,12 +43,12 @@ document.addEventListener('click', async event => {
   const policy = event.target.closest('[data-policy]'); if (policy) { showPolicy(policy.dataset.policy); return; }
   const action = event.target.closest('[data-action]')?.dataset.action;
   if (action === 'details') openDialog('#details-dialog');
-  if (action === 'login') { if (currentUser) location.hash = 'library'; else openDialog('#login-dialog'); }
+  if (action === 'login') { if (currentUser?.emailVerified) location.hash = 'library'; else openDialog('#login-dialog'); }
   if (action === 'library') location.hash = 'library';
   if (action === 'home') location.hash = 'home';
   if (action === 'preview') startReader();
   if (action === 'logout' && auth) { await authSDK.signOut(auth); notify('You have signed out.'); }
-  if (action === 'checkout') { if (!currentUser) openDialog('#login-dialog'); else openDialog('#checkout-dialog'); }
+  if (action === 'checkout') { if (!currentUser?.emailVerified) openDialog('#login-dialog'); else openDialog('#checkout-dialog'); }
 });
 $$('dialog').forEach(dialog => dialog.addEventListener('click', event => { if (event.target !== dialog) return; const rect = dialog.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close(); }));
 function resumeKey() { return activeBook && currentUser ? `toppers-reader:${currentUser.uid}:${activeBook.bookId}` : 'toppers-demo-page'; }
@@ -89,6 +91,7 @@ function emptyLibrary(title, description, action, text) {
 async function showLibrary() {
   $('#logout-button').hidden = !currentUser;
   if (!currentUser) { emptyLibrary('Your bookshelf starts here.', config.authEnabled ? 'Sign in with the same account you use at checkout to find your purchased books.' : 'Our first complete book is being prepared. Customer sign-in and your personal bookshelf will open when the store is ready.', 'login', config.authEnabled ? 'Sign in to My Books →' : 'View sign-in options →'); return; }
+  if (!currentUser.emailVerified) { emptyLibrary('Verify your email first.', 'Open the verification email in your inbox, then return here to continue. You can resend it from your account screen.', 'login', 'Verify my email →'); return; }
   $('#library-content').textContent = 'Loading your bookshelf…';
   const userAtRequest = currentUser.uid;
   try {
@@ -110,20 +113,96 @@ function route() {
   else if (location.hash) { requestAnimationFrame(() => { const target = document.getElementById(location.hash.slice(1)); if (target) target.scrollIntoView({ behavior: 'instant' }); }); }
 }
 window.addEventListener('hashchange', route); route();
-function loginError(error) { const messages = { 'auth/popup-closed-by-user': 'The Google sign-in window was closed. You can try again.', 'auth/popup-blocked': 'Allow the sign-in popup in your browser, then try again.', 'auth/too-many-requests': 'Too many attempts. Please wait and try again.', 'auth/invalid-action-code': 'This sign-in link has expired or already been used. Request a new link.', 'auth/unauthorized-domain': 'Sign-in is not available on this address yet. Please contact support.', 'auth/operation-not-allowed': 'This sign-in option is not ready yet. Please contact support.' }; return messages[error.code] || 'Sign-in could not be completed. Please try again or contact support.'; }
+function setAuthBusy(busy) {
+  authBusy = busy;
+  ['google-login', 'login-email', 'login-password', 'email-login', 'forgot-password', 'show-password'].forEach(id => { $('#' + id).disabled = busy || !auth; });
+  $$('[data-auth-mode]').forEach(button => { button.disabled = busy || !auth; });
+}
+function renderAuthState() {
+  const unverified = !!currentUser && !currentUser.emailVerified;
+  $('#auth-entry').hidden = unverified;
+  $('#email-verification').hidden = !unverified;
+  if (unverified) {
+    $('#verification-description').textContent = `Verify ${currentUser.email} using the email in your inbox or spam folder, then return here.`;
+    $('#login-status').textContent = 'Email verification is required before you can purchase or read a book.';
+  } else if (auth && !authBusy) {
+    $('#login-status').textContent = 'Choose Google or sign in with your email and password.';
+  }
+}
+function setLoginMode(mode) {
+  if (authBusy) return;
+  loginMode = mode;
+  $$('[data-auth-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.authMode === mode)));
+  const signup = mode === 'signup';
+  $('#login-password').value = '';
+  $('#login-password').type = 'password';
+  $('#login-password').autocomplete = signup ? 'new-password' : 'current-password';
+  $('#login-password').minLength = signup ? 8 : 1;
+  $('#login-password').placeholder = signup ? 'Create a password (8+ characters)' : 'Your password';
+  $('#password-hint').hidden = !signup;
+  $('#forgot-password').hidden = signup;
+  $('#email-login').textContent = signup ? 'Create my account →' : 'Sign in with email →';
+  $('#show-password').textContent = 'Show';
+  $('#show-password').setAttribute('aria-pressed', 'false');
+  $('#show-password').setAttribute('aria-label', 'Show password');
+}
+$$('[data-auth-mode]').forEach(button => button.addEventListener('click', () => setLoginMode(button.dataset.authMode)));
+$('#show-password').addEventListener('click', () => {
+  const shown = $('#login-password').type === 'password';
+  $('#login-password').type = shown ? 'text' : 'password';
+  $('#show-password').textContent = shown ? 'Hide' : 'Show';
+  $('#show-password').setAttribute('aria-pressed', String(shown));
+  $('#show-password').setAttribute('aria-label', shown ? 'Hide password' : 'Show password');
+});
+$('#login-dialog').addEventListener('close', () => { $('#login-password').value = ''; $('#login-password').type = 'password'; $('#show-password').textContent = 'Show'; $('#show-password').setAttribute('aria-pressed', 'false'); $('#show-password').setAttribute('aria-label', 'Show password'); });
+function continueToBooks() { $('#login-dialog').close(); if (location.hash === '#library') showLibrary(); else location.hash = 'library'; }
 $('#google-login').addEventListener('click', async () => {
-  if (!auth) return; $('#google-login').disabled = true;
-  try { await authSDK.signInWithPopup(auth, new authSDK.GoogleAuthProvider()); $('#login-dialog').close(); location.hash = 'library'; }
-  catch (error) { $('#login-status').textContent = loginError(error); }
-  finally { $('#google-login').disabled = false; }
+  if (!auth || authBusy) return; setAuthBusy(true);
+  try { const result = await authSDK.signInWithPopup(auth, new authSDK.GoogleAuthProvider()); currentUser = result.user; renderAuthState(); if (currentUser.emailVerified) continueToBooks(); }
+  catch (error) { $('#login-status').textContent = authMessage(error); }
+  finally { setAuthBusy(false); }
 });
 $('#email-login-form').addEventListener('submit', async event => {
-  event.preventDefault(); if (!auth) return; const email = $('#login-email').value.trim(); $('#email-login').disabled = true;
+  event.preventDefault(); if (!auth || authBusy) return;
+  if (!$('#email-login-form').reportValidity()) return;
+  const email = $('#login-email').value.trim();
+  setAuthBusy(true);
   try {
-    if (authSDK.isSignInWithEmailLink(auth, location.href)) { await authSDK.signInWithEmailLink(auth, email, location.href); safeStorage('remove', 'toppers-signin-email'); history.replaceState(null, '', '/#library'); $('#login-dialog').close(); route(); }
-    else { await authSDK.sendSignInLinkToEmail(auth, email, { url: location.origin + '/#library', handleCodeInApp: true }); safeStorage('set', 'toppers-signin-email', email); $('#login-status').textContent = 'Sign-in link sent. Check your inbox and spam folder, then open the link to continue.'; }
-  } catch (error) { $('#login-status').textContent = loginError(error); }
-  finally { $('#email-login').disabled = false; }
+    const result = await emailAuthentication(authSDK, auth, loginMode, email, $('#login-password').value, location.origin + '/#library');
+    $('#login-password').value = '';
+    currentUser = result.user; renderAuthState();
+    if (result.verificationSent) { verificationSentAt = Date.now(); $('#login-status').textContent = 'Verification email sent. Open it, verify your email, then return here.'; }
+    else if (!currentUser.emailVerified && loginMode === 'signup') $('#login-status').textContent = 'Your account was created. Use Resend verification email to verify your address.';
+    if (currentUser.emailVerified) continueToBooks();
+  } catch (error) { $('#login-status').textContent = authMessage(error); }
+  finally { setAuthBusy(false); }
+});
+$('#forgot-password').addEventListener('click', async () => {
+  if (!auth || authBusy) return;
+  if (!$('#login-email').reportValidity()) return;
+  setAuthBusy(true);
+  try { $('#login-status').textContent = await passwordReset(authSDK, auth, $('#login-email').value.trim(), location.origin + '/#library'); }
+  catch (error) { $('#login-status').textContent = authMessage(error); }
+  finally { setAuthBusy(false); }
+});
+$('#resend-verification').addEventListener('click', async () => {
+  if (!auth?.currentUser || auth.currentUser.emailVerified) return;
+  if (Date.now() - verificationSentAt < 60000) { $('#login-status').textContent = 'An email was just sent. Please wait a minute before requesting another.'; return; }
+  $('#resend-verification').disabled = true;
+  try { await authSDK.sendEmailVerification(auth.currentUser, { url: location.origin + '/#library' }); verificationSentAt = Date.now(); $('#login-status').textContent = 'Verification email sent. Check your inbox and spam folder.'; }
+  catch (error) { $('#login-status').textContent = authMessage(error); }
+  finally { $('#resend-verification').disabled = false; }
+});
+$('#check-verification').addEventListener('click', async () => {
+  if (!auth?.currentUser) return; $('#check-verification').disabled = true;
+  try {
+    await auth.currentUser.reload();
+    currentUser = auth.currentUser;
+    if (!currentUser.emailVerified) { $('#login-status').textContent = 'Your email is not verified yet. Open the verification email first, then try again.'; return; }
+    await currentUser.getIdToken(true);
+    renderAuthState(); continueToBooks();
+  } catch (error) { $('#login-status').textContent = authMessage(error); }
+  finally { $('#check-verification').disabled = false; }
 });
 function loadScript(src) { return new Promise((resolve, reject) => { const script = document.createElement('script'); script.src = src; script.onload = resolve; script.onerror = reject; document.head.append(script); }); }
 $('#checkout-form').addEventListener('submit', async event => {
@@ -141,19 +220,23 @@ $('#checkout-form').addEventListener('submit', async event => {
 });
 $('#coupon').addEventListener('input', () => { const code = $('#coupon').value.trim().toUpperCase(); $('#checkout-total').textContent = code === 'TOPPERS50' ? '₹199 − ₹50 = ₹149 · 365-day online access' : code ? 'Coupon will be validated before payment.' : '₹199 · Apply TOPPERS50 for ₹149'; });
 async function initialise() {
-  try { config = await api('config'); } catch { return; }
+  try { config = await api('config'); } catch { $('#login-status').textContent = 'Sign-in could not be loaded. Please refresh or contact support.'; return; }
   if (config.authEnabled && config.firebase) {
     try {
       const [app, sdk] = await Promise.all([import('https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js'), import('https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js')]);
       authSDK = sdk; auth = sdk.getAuth(app.initializeApp(config.firebase));
-      $('#google-login').disabled = false; $('#login-email').disabled = false; $('#email-login').disabled = false;
-      $('#login-status').textContent = 'Choose Google or receive a secure sign-in link by email.';
-      sdk.onAuthStateChanged(auth, user => { currentUser = user; $('#account-button').textContent = user ? 'My account ↗' : 'Sign in ↗'; if (location.hash === '#library') showLibrary(); });
-      if (sdk.isSignInWithEmailLink(auth, location.href)) {
-        const email = safeStorage('get', 'toppers-signin-email');
-        if (email) { try { await sdk.signInWithEmailLink(auth, email, location.href); safeStorage('remove', 'toppers-signin-email'); history.replaceState(null, '', '/#library'); route(); } catch (error) { $('#login-status').textContent = loginError(error); openDialog('#login-dialog'); } }
-        else { $('#login-status').textContent = 'Confirm the email address that received this sign-in link.'; $('#email-login').textContent = 'Complete email sign-in →'; openDialog('#login-dialog'); }
-      }
+      auth.languageCode = 'en';
+      setLoginMode('signin'); setAuthBusy(false);
+      $('#login-status').textContent = 'Choose Google or sign in with your email and password.';
+      sdk.onAuthStateChanged(auth, user => {
+        const previousUid = currentUser?.uid;
+        currentUser = user;
+        $('#account-button').textContent = user ? 'My account ↗' : 'Sign in ↗';
+        if (previousUid !== user?.uid) verificationSentAt = 0;
+        renderAuthState();
+        if (location.hash === '#library') showLibrary();
+      });
+      if (location.hash === '#library') showLibrary();
     } catch { $('#login-status').textContent = 'Sign-in is temporarily unavailable. Please try again later.'; }
   }
   if (config.salesOpen) {

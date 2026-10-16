@@ -8,8 +8,8 @@ Public URL: https://toppers-book.pages.dev/
 The complete CBSE Class 10 Mathematics Standard book is **coming soon**.
 The storefront, product details, planned contents, illustrative reader, FAQs,
 support links and policy pages work without external account configuration.
-No payment is collected, no paid manuscript is public, and sign-in is disabled
-until Firebase configuration exists. The reader examples are original examples,
+No payment is collected and no paid manuscript is public. Google and email/password
+sign-in are connected to the owner's `toppers-books` Firebase project. The reader examples are original examples,
 explicitly not verified PYQs or final manuscript pages.
 
 Business: GUPTA ENTERPRISES. Brand: Toppers Books.
@@ -30,21 +30,31 @@ at the project root. No npm dependencies are needed for runtime.
 Prefer the curated `dist` output before production sales so only web assets and
 policy pages are public. Never put PDFs or private page images in this repository.
 
-## Login configuration (next account step)
+## Login configuration
 
-1. Create a Firebase project owned by the business. Register a Web app.
-2. Enable Authentication > Google and Email/Password > Email link (passwordless).
+The owner supplied their Firebase Web app configuration, stored in
+`assets/firebase-config.js`. These are public identifiers, not admin credentials.
+The Pages API and the Firebase browser SDK use the same configuration. No Cloudflare
+environment variables are required just to enable this configured login.
+
+1. Firebase project: `toppers-books`; Web app: Toppers Books Website.
+2. Enable Authentication > Google and Email/Password. Keep Email link and Phone OFF.
 3. Add `toppers-book.pages.dev` to authorised domains. Add any custom domain later.
-4. In Cloudflare Pages > Settings > Variables and Secrets, add:
-   - `FIREBASE_API_KEY` — public Web app API key, not a service-account key.
-   - `FIREBASE_PROJECT_ID` — exact Firebase project ID.
-   - `FIREBASE_AUTH_DOMAIN` — the Web app authDomain, typically PROJECT.firebaseapp.com.
-5. Redeploy. Test Google popup sign-in on phone/desktop and email links on the
-   same and a different device. Email is verified by the provider before the API
-   accepts it. No custom passwords or fake local accounts are used.
+4. Test Google popup sign-in and email signup/login on phone/desktop. New email
+   accounts receive a verification email. Until email verification completes,
+   purchases and private reading are denied. The user can reload verification state,
+   resend verification after a cooldown, sign out, or request a password reset.
+5. Normal password login does not send a sign-in email. Passwords are handled by
+   Firebase; the store does not log or persist them. Keep email enumeration protection ON.
 
-Email sign-in uses a secure link, not a numeric OTP. Provider quotas and any
-upgraded plan costs must be checked in that account. Mobile numbers are collected
+For a separate environment, all three `FIREBASE_API_KEY`, `FIREBASE_PROJECT_ID`,
+`FIREBASE_AUTH_DOMAIN` can override the public config. Set `AUTH_DISABLED=true` to
+temporarily disable sign-in and checkout. Never add a service-account private key.
+While the store is closed and D1 is not bound, a verified account sees an empty shelf.
+
+Email-link login was replaced because Spark permits only 5 sign-in link emails/day.
+Verification/reset mail also has quotas; check current Firebase limits and any
+upgraded plan costs in the account. Mobile numbers are collected
 at checkout but NOT verified by SMS in this release. Add an SMS verification
 provider and verified-number checks before describing numbers as verified.
 
@@ -91,7 +101,7 @@ books or accept public test payments on the production store.
 
 - Finish and check every chapter; verify all PYQ attributions and final contents.
 - Review public Terms, Privacy, Digital Access and Refund policies against actual operations.
-- Connect Firebase, D1, private R2, and the activated Razorpay account.
+- Verify the connected Firebase login end to end, and bind D1, private R2, and the activated Razorpay account.
 - Perform sandbox end-to-end checks in a restricted environment (the current
   production gate deliberately accepts only live-key configuration).
 - Test real login, order creation, cancel/failure/pending/captured payment,
@@ -118,7 +128,8 @@ copy/download protection. Original PDFs are never sent to the browser.
 No external service credentials are required by these checks.
 
 Useful official references:
-- https://firebase.google.com/docs/auth/web/email-link-auth
+- https://firebase.google.com/docs/auth/web/password-auth
+- https://firebase.google.com/docs/auth/web/manage-users
 - https://firebase.google.com/docs/auth/admin/verify-id-tokens
 - https://developers.cloudflare.com/pages/functions/bindings/
 - https://razorpay.com/docs/payments/payment-gateway/web-integration/standard/integration-steps/
