@@ -1,0 +1,9 @@
+{
+  "name": "toppers-books",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check assets/app.js && node --check 'functions/api/[[path]].js'",
+    "test": "node --test tests/*.test.js"
+  }
+}
