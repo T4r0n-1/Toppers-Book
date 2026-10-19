@@ -41,3 +41,14 @@ test('complete page and watermark fit in desktop, tablet, phone and short viewpo
     }
   }
 });
+
+test('page swipe accepts horizontal turns but ignores scrolling, zooming and long drags', async () => {
+  const { swipeDirection } = await import('../assets/reader-layout.js');
+  assert.equal(swipeDirection(-80, 10, 350, 390), 1);
+  assert.equal(swipeDirection(80, -10, 350, 390), -1);
+  assert.equal(swipeDirection(15, 180, 300, 390), 0);
+  assert.equal(swipeDirection(80, 100, 300, 390), 0);
+  assert.equal(swipeDirection(25, 0, 200, 390), 0);
+  assert.equal(swipeDirection(-200, 0, 2000, 1200), 0);
+  assert.equal(swipeDirection(-200, 0, 300, 1200, 1.25), 0);
+});

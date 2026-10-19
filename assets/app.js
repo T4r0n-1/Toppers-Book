@@ -1,4 +1,5 @@
-import { spreadPages, turnPage, fitSpread } from './reader-layout.js';
+import { spreadPages, turnPage, fitSpread, swipeDirection } from './reader-layout.js';
+import { setupRoughPads } from './rough-pad.js';
 import { book as bookEdition } from './book-data.js';
 import { authMessage, emailAuthentication, passwordReset, profileInput } from './auth-helpers.js';
 const $ = (selector, parent = document) => parent.querySelector(selector);
@@ -55,10 +56,16 @@ document.addEventListener('click', async event => {
 });
 $$('dialog').forEach(dialog => dialog.addEventListener('click', event => { if (event.target !== dialog) return; const rect = dialog.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close(); }));
 function resumeKey() { return activeBook && currentUser ? `toppers-reader:${currentUser.uid}:${activeBook.bookId}` : 'toppers-book-sample-page-v1'; }
-let readerMode = 'spread', modeChosen = false;
+let readerMode = 'spread', modeChosen = false, turnTimer = null, gesture = null;
+const roughPads = setupRoughPads($('#reader-dialog'), () => ({ uid: currentUser?.uid || 'sample', book: activeBook?.bookId || 'sample' }));
+function resetPageTurn() {
+  clearTimeout(turnTimer); turnTimer = null;
+  const spread = $('#reader-page'); spread.classList.remove('is-dragging', 'is-turning'); spread.style.removeProperty('--turn-x'); spread.style.removeProperty('--turn-angle');
+}
 function visiblePages() { return spreadPages(page, activeBook ? activeBook.pageCount : samples.length, activeBook ? readerMode : 'single'); }
 function applyZoom() {
   const viewport = $('#page-viewport');
+  viewport.classList.toggle('is-zoomed', zoom > 1);
   const padding = getComputedStyle(viewport);
   const width = viewport.clientWidth - parseFloat(padding.paddingLeft) - parseFloat(padding.paddingRight);
   const height = viewport.clientHeight - parseFloat(padding.paddingTop) - parseFloat(padding.paddingBottom);
@@ -72,6 +79,7 @@ function applyZoom() {
   $('#zoom-out').disabled = zoom <= 1; $('#zoom-in').disabled = zoom >= 3;
 }
 async function renderPage() {
+  resetPageTurn();
   const request = ++readerRequest;
   const book = activeBook;
   const total = book ? book.pageCount : samples.length;
@@ -138,16 +146,51 @@ function startReader(book = null) {
   }));
   $('#reader-page').classList.toggle('is-paid', !!book);
   setContents(matchMedia('(min-width: 761px)').matches);
+  roughPads.refresh();
   openDialog('#reader-dialog'); $('#reader-contents').scrollTop = 0; renderPage();
 }
 $('#reader-dialog').addEventListener('close', () => {
-  ++readerRequest; activeBook = null; $('#reader-page').replaceChildren();
+  ++readerRequest; gesture = null; resetPageTurn(); roughPads.closeAll(); activeBook = null; $('#reader-page').replaceChildren();
   if (document.fullscreenElement === $('#reader-dialog')) document.exitFullscreen?.().catch(() => {});
 });
 function navigateReader(direction) {
-  page = turnPage(page, activeBook ? activeBook.pageCount : samples.length, activeBook ? readerMode : 'single', direction);
-  renderPage();
+  if (turnTimer !== null) return;
+  const total = activeBook ? activeBook.pageCount : samples.length;
+  const mode = activeBook ? readerMode : 'single';
+  const target = turnPage(page, total, mode, direction);
+  if (spreadPages(target, total, mode)[0] === visiblePages()[0]) { resetPageTurn(); return; }
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  resetPageTurn();
+  if (reduced) { page = target; renderPage(); return; }
+  const spread = $('#reader-page');
+  spread.classList.add('is-turning'); spread.style.setProperty('--turn-x', `${direction * -45}px`); spread.style.setProperty('--turn-angle', `${direction * -7}deg`);
+  turnTimer = setTimeout(() => { turnTimer = null; if (!$('#reader-dialog').open) return; page = target; renderPage(); }, 145);
 }
+const readingViewport = $('#page-viewport');
+readingViewport.addEventListener('pointerdown', event => {
+  if (event.isPrimary === false) { gesture = null; resetPageTurn(); return; }
+  if (zoom !== 1 || event.button !== 0 || turnTimer !== null || event.target.closest('button, a')) return;
+  gesture = { x: event.clientX, y: event.clientY, started: performance.now(), id: event.pointerId };
+  readingViewport.setPointerCapture(event.pointerId);
+});
+readingViewport.addEventListener('pointermove', event => {
+  if (!gesture || gesture.id !== event.pointerId) return;
+  const dx = event.clientX - gesture.x, dy = event.clientY - gesture.y;
+  if (Math.abs(dy) > 20 && Math.abs(dy) > Math.abs(dx)) { gesture = null; resetPageTurn(); return; }
+  if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(dy) * 1.3) return;
+  const spread = $('#reader-page'); spread.classList.add('is-dragging');
+  spread.style.setProperty('--turn-x', `${Math.max(-100, Math.min(100, dx * .35))}px`);
+  spread.style.setProperty('--turn-angle', `${Math.max(-7, Math.min(7, dx * .025))}deg`);
+});
+readingViewport.addEventListener('pointerup', event => {
+  const start = gesture; gesture = null;
+  if (!start || start.id !== event.pointerId) return;
+  const direction = swipeDirection(event.clientX - start.x, event.clientY - start.y, performance.now() - start.started, readingViewport.clientWidth, zoom);
+  resetPageTurn();
+  if (direction) navigateReader(direction);
+});
+readingViewport.addEventListener('pointercancel', () => { gesture = null; resetPageTurn(); });
+readingViewport.addEventListener('lostpointercapture', () => { if (gesture) { gesture = null; resetPageTurn(); } });
 $('#prev-page').addEventListener('click', () => navigateReader(-1));
 $('#next-page').addEventListener('click', () => navigateReader(1));
 $('#jump-prev').addEventListener('click', () => navigateReader(-1));
@@ -174,7 +217,7 @@ $('#reader-dialog').addEventListener('copy', event => {
   if (!event.target.closest('input, textarea')) event.preventDefault();
 });
 $('#reader-dialog').addEventListener('keydown', event => {
-  if (event.target.closest('button, input, select, a, .reader-sidebar')) return;
+  if (event.target.closest('button, input, textarea, select, a, .reader-sidebar, .rough-pad')) return;
   if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') { event.preventDefault(); navigateReader(event.key === 'ArrowRight' ? 1 : -1); }
 });
 new ResizeObserver(() => { if ($('#reader-dialog').open) applyZoom(); }).observe($('#page-viewport'));
@@ -277,6 +320,23 @@ function route() {
   else if (location.hash) { requestAnimationFrame(() => { const target = document.getElementById(location.hash.slice(1)); if (target) target.scrollIntoView({ behavior: 'instant' }); }); }
 }
 window.addEventListener('hashchange', route); route();
+function clearLoginError() {
+  $('#email-login-error').hidden = true; $('#email-login-error').textContent = '';
+  $('#login-status').classList.remove('is-error');
+  if (auth) $('#login-status').textContent = 'Choose Google or sign in with your email and password.';
+  $('#login-email').removeAttribute('aria-invalid'); $('#login-password').removeAttribute('aria-invalid');
+}
+function showLoginError(error, fields = false) {
+  const message = authMessage(error);
+  $('#login-status').textContent = message; $('#login-status').classList.add('is-error');
+  if (fields) {
+    const inline = $('#email-login-error'); inline.textContent = message; inline.hidden = false;
+    if (['auth/invalid-credential', 'auth/invalid-login-credentials', 'auth/user-not-found', 'auth/wrong-password'].includes(error?.code)) {
+      $('#login-email').setAttribute('aria-invalid', 'true'); $('#login-password').setAttribute('aria-invalid', 'true');
+    }
+    inline.scrollIntoView({ block: 'nearest' });
+  } else $('#login-status').scrollIntoView({ block: 'nearest' });
+}
 function setAuthBusy(busy) {
   authBusy = busy;
   ['google-login', 'login-email', 'login-password', 'email-login', 'forgot-password', 'show-password'].forEach(id => { $('#' + id).disabled = busy || !auth; });
@@ -290,13 +350,13 @@ function renderAuthState() {
   if (unverified) {
     $('#verification-description').textContent = `Verify ${currentUser.email} using the email in your inbox or spam folder, then return here.`;
     $('#login-status').textContent = 'Email verification is required before you can purchase or read a book.';
-  } else if (auth && !authBusy) {
+  } else if (auth && !authBusy && $('#email-login-error').hidden && !$('#login-status').classList.contains('is-error')) {
     $('#login-status').textContent = 'Choose Google or sign in with your email and password.';
   }
 }
 function setLoginMode(mode) {
   if (authBusy) return;
-  loginMode = mode;
+  loginMode = mode; clearLoginError();
   $$('[data-auth-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.authMode === mode)));
   const signup = mode === 'signup';
   $('#signup-details').hidden = !signup;
@@ -325,14 +385,15 @@ $('#show-password').addEventListener('click', () => {
 $('#login-dialog').addEventListener('close', () => { $('#login-password').value = ''; $('#login-password').type = 'password'; $('#show-password').textContent = 'Show'; $('#show-password').setAttribute('aria-pressed', 'false'); $('#show-password').setAttribute('aria-label', 'Show password'); });
 async function continueToBooks() { $('#login-dialog').close(); if (location.hash === '#library') showLibrary(); else location.hash = 'library'; await loadProfile(); if (!currentProfile && currentUser && config.profileEnabled) await openProfile(); }
 $('#google-login').addEventListener('click', async () => {
-  if (!auth || authBusy) return; setAuthBusy(true);
+  if (!auth || authBusy) return; clearLoginError(); setAuthBusy(true);
   try { const result = await authSDK.signInWithPopup(auth, new authSDK.GoogleAuthProvider()); currentUser = result.user; renderAuthState(); if (currentUser.emailVerified) continueToBooks(); }
-  catch (error) { $('#login-status').textContent = authMessage(error); }
+  catch (error) { showLoginError(error); }
   finally { setAuthBusy(false); }
 });
 $('#email-login-form').addEventListener('submit', async event => {
   event.preventDefault(); if (!auth || authBusy) return;
   if (!$('#email-login-form').reportValidity()) return;
+  clearLoginError();
   const email = $('#login-email').value.trim();
   if (loginMode === 'signup') {
     if (!config.profileEnabled) { $('#login-status').textContent = 'Account registration is being prepared. Please try again shortly. Existing users can sign in.'; return; }
@@ -340,6 +401,7 @@ $('#email-login-form').addEventListener('submit', async event => {
     catch (error) { $('#login-status').textContent = error.message; return; }
   }
   setAuthBusy(true);
+  $('#login-status').textContent = loginMode === 'signup' ? 'Creating your account…' : 'Signing in…';
   try {
     const result = await emailAuthentication(authSDK, auth, loginMode, email, $('#login-password').value, location.origin + '/#library');
     $('#login-password').value = '';
@@ -354,7 +416,7 @@ $('#email-login-form').addEventListener('submit', async event => {
     else if (!currentUser.emailVerified && loginMode === 'signup') $('#login-status').textContent = 'Your account was created. Use Resend verification email to verify your address.';
     if (profileError) $('#login-status').textContent = 'Your account was created, but your profile could not be saved. After signing in, open My profile to complete it.';
     if (currentUser.emailVerified) continueToBooks();
-  } catch (error) { $('#login-status').textContent = authMessage(error); }
+  } catch (error) { showLoginError(error, true); }
   finally { setAuthBusy(false); }
 });
 $('#forgot-password').addEventListener('click', async () => {
@@ -362,7 +424,7 @@ $('#forgot-password').addEventListener('click', async () => {
   if (!$('#login-email').reportValidity()) return;
   setAuthBusy(true);
   try { $('#login-status').textContent = await passwordReset(authSDK, auth, $('#login-email').value.trim(), location.origin + '/#library'); }
-  catch (error) { $('#login-status').textContent = authMessage(error); }
+  catch (error) { showLoginError(error); }
   finally { setAuthBusy(false); }
 });
 $('#resend-verification').addEventListener('click', async () => {
@@ -370,7 +432,7 @@ $('#resend-verification').addEventListener('click', async () => {
   if (Date.now() - verificationSentAt < 60000) { $('#login-status').textContent = 'An email was just sent. Please wait a minute before requesting another.'; return; }
   $('#resend-verification').disabled = true;
   try { await authSDK.sendEmailVerification(auth.currentUser, { url: location.origin + '/#library' }); verificationSentAt = Date.now(); $('#login-status').textContent = 'Verification email sent. Check your inbox and spam folder.'; }
-  catch (error) { $('#login-status').textContent = authMessage(error); }
+  catch (error) { showLoginError(error); }
   finally { $('#resend-verification').disabled = false; }
 });
 $('#check-verification').addEventListener('click', async () => {
@@ -381,7 +443,7 @@ $('#check-verification').addEventListener('click', async () => {
     if (!currentUser.emailVerified) { $('#login-status').textContent = 'Your email is not verified yet. Open the verification email first, then try again.'; return; }
     await currentUser.getIdToken(true);
     renderAuthState(); continueToBooks();
-  } catch (error) { $('#login-status').textContent = authMessage(error); }
+  } catch (error) { showLoginError(error); }
   finally { $('#check-verification').disabled = false; }
 });
 function loadScript(src) { return new Promise((resolve, reject) => { const script = document.createElement('script'); script.src = src; script.onload = resolve; script.onerror = reject; document.head.append(script); }); }

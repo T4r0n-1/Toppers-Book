@@ -19,3 +19,8 @@ export function fitSpread(width, height, count, ratio, zoom = 1) {
   const pageWidth = pageHeight * ratio;
   return { width: pageWidth * count + gap, height: pageHeight, pageWidth, gap };
 }
+
+export function swipeDirection(dx, dy, elapsed, width, zoom = 1) {
+  if (zoom !== 1 || elapsed > 1600 || Math.abs(dx) < Math.min(90, Math.max(45, width * .12)) || Math.abs(dx) < Math.abs(dy) * 1.5) return 0;
+  return dx < 0 ? 1 : -1;
+}

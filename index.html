@@ -7,8 +7,8 @@
   <meta name="theme-color" content="#6040b8">
   <title>Toppers Books — Make every chapter count.</title>
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
-  <link rel="stylesheet" href="/assets/style.css?v=reader-4">
-  <script src="/assets/app.js?v=reader-4" type="module"></script>
+  <link rel="stylesheet" href="/assets/style.css?v=reader-5">
+  <script src="/assets/app.js?v=reader-5" type="module"></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -75,7 +75,8 @@
       <form id="email-login-form">
         <div id="signup-details" hidden><label for="signup-name">Full name</label><input id="signup-name" name="name" autocomplete="name" minlength="2" maxlength="80" placeholder="Your full name" disabled><label for="signup-phone">Mobile number</label><input id="signup-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="18" placeholder="10-digit Indian mobile number" disabled><p class="field-hint">Used for your account and personal book watermark. This number is not verified by SMS.</p></div>
         <label for="login-email">Email address</label><input id="login-email" type="email" name="email" placeholder="you@example.com" autocomplete="email" required maxlength="254" disabled>
-        <label for="login-password" id="password-label">Password</label><div class="password-field"><input id="login-password" type="password" name="password" placeholder="Your password" autocomplete="current-password" required maxlength="128" disabled><button type="button" id="show-password" aria-label="Show password" aria-pressed="false">Show</button></div>
+        <label for="login-password" id="password-label">Password</label><div class="password-field"><input id="login-password" aria-describedby="email-login-error" type="password" name="password" placeholder="Your password" autocomplete="current-password" required maxlength="128" disabled><button type="button" id="show-password" aria-label="Show password" aria-pressed="false">Show</button></div>
+        <p id="email-login-error" class="email-login-error" role="alert" hidden></p>
         <p id="password-hint" class="field-hint" hidden>Use at least 8 characters. Verify your email after creating the account.</p>
         <label class="checkbox-label" id="signup-consent-label" hidden><input type="checkbox" id="signup-consent"><span>I agree to the <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms</a> and <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a> and the use of my name and mobile number for my account and personal reading copy.</span></label><button type="submit" class="button full-width" id="email-login" disabled>Sign in with email →</button>
         <button type="button" class="inline-button forgot-password" id="forgot-password" disabled>Forgot password?</button>
@@ -108,9 +109,14 @@
           <button class="text-button" id="reset-zoom">Fit page</button>
           <label class="reader-view-label" for="reader-view">View</label><select id="reader-view"><option value="spread">Two pages</option><option value="single">Single page</option></select>
           <a class="text-button reader-correction" id="reader-correction" href="/corrections.html?source=sample#suggest" target="_blank" rel="noopener noreferrer">Suggest a correction ↗</a>
-          <a class="text-button reader-updates" href="/corrections.html#updates" target="_blank" rel="noopener noreferrer">Updates ↗</a>
         </div>
-        <div class="page-viewport" id="page-viewport" tabindex="0" aria-label="Reading pages. Use zoom to enlarge and scroll."><div id="reader-page" class="reader-page"></div></div>
+        <div class="reading-workspace" id="reading-workspace">
+          <button type="button" class="rough-launcher rough-launcher-left" data-open-rough="left" aria-controls="rough-pad-left" aria-expanded="false" aria-label="Open left rough-work pad">✎<span>Rough</span></button>
+          <aside id="rough-pad-left" class="rough-pad rough-pad-left" data-rough-pad="left" aria-label="Left rough-work pad" hidden></aside>
+          <div class="page-viewport" id="page-viewport" tabindex="0" aria-label="Reading pages. Swipe left or right to turn pages at Fit page zoom."><div id="reader-page" class="reader-page"></div></div>
+          <aside id="rough-pad-right" class="rough-pad rough-pad-right" data-rough-pad="right" aria-label="Right rough-work pad" hidden></aside>
+          <button type="button" class="rough-launcher rough-launcher-right" data-open-rough="right" aria-controls="rough-pad-right" aria-expanded="false" aria-label="Open right rough-work pad">✎<span>Rough</span></button>
+        </div>
         <div class="page-navigation">
           <button class="button button-outline button-small" id="prev-page">← Previous</button>
           <div class="reader-position"><span id="page-label" aria-live="polite"></span><form id="reader-jump"><label for="jump-page">Page</label><button class="page-arrow" id="jump-prev" type="button" aria-label="Turn to previous pages">←</button><input id="jump-page" type="number" inputmode="numeric" min="1" step="1" required aria-label="Go to book page"><button class="page-arrow" id="jump-next" type="button" aria-label="Turn to next pages">→</button><button class="text-button" type="submit">Go</button></form></div>

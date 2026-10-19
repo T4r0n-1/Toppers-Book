@@ -13,9 +13,10 @@ export function authMessage(error) {
     'auth/password-does-not-meet-requirements': 'Your password does not meet the account security requirements. Please use a stronger password.',
     'auth/email-already-in-use': 'An account may already use this email. Try signing in, Google sign-in, or Forgot password.',
     'auth/account-exists-with-different-credential': 'Try the sign-in method you originally used for this email.',
-    'auth/invalid-credential': 'The email or password could not be verified. Try again or use Forgot password.',
-    'auth/user-not-found': 'The email or password could not be verified. Try again or use Forgot password.',
-    'auth/wrong-password': 'The email or password could not be verified. Try again or use Forgot password.',
+    'auth/invalid-credential': 'Invalid email or password. Please try again or use Forgot password.',
+    'auth/invalid-login-credentials': 'Invalid email or password. Please try again or use Forgot password.',
+    'auth/user-not-found': 'Invalid email or password. Please try again or use Forgot password.',
+    'auth/wrong-password': 'Invalid email or password. Please try again or use Forgot password.',
     'auth/user-disabled': 'This account cannot sign in. Please contact support.'
   };
   return messages[error?.code] || 'Sign-in could not be completed. Please try again or contact support.';

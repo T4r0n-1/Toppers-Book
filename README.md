@@ -192,3 +192,18 @@ Private upload and paid-reading end-to-end verification still require the owner'
 Cloudflare account; a successful Pages deployment does not upload private R2
 objects or run D1 SQL. The watermark footer is outside the original image area
 so it does not cover the author/footer text on the supplied pages.
+
+
+## Reader controls and local rough work
+
+The reader uses a bounded viewport grid on mobile and desktop. At Fit page zoom,
+horizontal pointer swipes turn pages; zooming enables panning instead. Reduced
+motion preferences disable the turn effect. The reader toolbar has one correction
+link; the public corrections page continues to include update information.
+
+Left and right rough-work panels support pen/eraser strokes, undo and typed notes.
+Their localStorage drafts are keyed by user, book and side; they are not sent to
+D1 or R2 and do not sync across devices. A storage failure is shown in the pad.
+Clearing browser data removes drafts. These tools never edit book content.
+Credential failures show the same invalid-email/password message for missing
+accounts and wrong passwords, both in the summary and next to the password field.

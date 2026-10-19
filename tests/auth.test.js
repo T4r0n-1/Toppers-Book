@@ -62,3 +62,17 @@ test('auth can be explicitly disabled without enabling checkout', async () => {
   const config = await response.json();
   assert.equal(config.authEnabled, false); assert.equal(config.firebase, null); assert.equal(config.salesOpen, false);
 });
+
+test('wrong-password sign-in fails with an explicit invalid email/password message', async () => {
+  const sdk = {
+    async signInWithEmailAndPassword() { throw { code: 'auth/invalid-credential' }; },
+    async createUserWithEmailAndPassword() { assert.fail('Wrong password must not register an account'); },
+    async sendEmailVerification() { assert.fail('Wrong password must not send email'); }
+  };
+  try {
+    await emailAuthentication(sdk, {}, 'signin', 'buyer@example.test', 'wrong-password', 'https://store.test');
+    assert.fail('Invalid credentials unexpectedly signed in');
+  } catch (error) {
+    assert.equal(authMessage(error), 'Invalid email or password. Please try again or use Forgot password.');
+  }
+});
