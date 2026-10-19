@@ -1,7 +1,8 @@
 export function fullscreenElement(doc) { return doc.fullscreenElement || doc.webkitFullscreenElement || null; }
-export async function requestReaderFullscreen(doc) {
-  // A <dialog> cannot be the Fullscreen API target. The document root can.
-  const root = doc.documentElement;
+export async function requestReaderFullscreen(doc, target) {
+  // Fullscreen only the reader content inside the modal, never the document
+  // or the dialog itself. This preserves the modal in the browser top layer.
+  const root = target;
   try {
     if (root.requestFullscreen) await root.requestFullscreen({ navigationUI: 'hide' });
     else if (root.webkitRequestFullscreen) await root.webkitRequestFullscreen();
@@ -16,6 +17,7 @@ export async function exitReaderFullscreen(doc) {
   } catch { /* The browser may already have exited fullscreen. */ }
 }
 export function setupReaderFullscreen(root, { onResize, onMessage, canHide = () => true, onEnter = () => {}, onLock = () => {} }, doc = document) {
+  const stage = root.querySelector('#reader-stage');
   const fullscreen = root.querySelector('#reader-fullscreen');
   const lock = root.querySelector('#reader-lock');
   const hint = root.querySelector('#reader-focus-hint');
@@ -66,22 +68,22 @@ export function setupReaderFullscreen(root, { onResize, onMessage, canHide = () 
   }
   async function leave() {
     const owned = nativeOwned; nativeOwned = false; mode(false);
-    if (owned && fullscreenElement(doc) === doc.documentElement) await exitReaderFullscreen(doc);
+    if (owned && fullscreenElement(doc) === stage) await exitReaderFullscreen(doc);
   }
   fullscreen.addEventListener('click', async () => {
     if (active) { await leave(); return; }
     onEnter();
     mode(true);
-    if (fullscreenElement(doc) === doc.documentElement) return;
+    if (fullscreenElement(doc) === stage) return;
     nativeOwned = true;
-    const entered = await requestReaderFullscreen(doc);
+    const entered = await requestReaderFullscreen(doc, stage);
     if (!entered) { nativeOwned = false; onMessage('Full-window reading is on. This browser controls whether its address bar can be hidden.'); }
     if (!root.open) await leave();
     resize();
   });
   lock.addEventListener('click', () => setLocked(!locked));
   function changed() {
-    if (fullscreenElement(doc) === doc.documentElement) { if (root.open && !active) mode(true); resize(); }
+    if (fullscreenElement(doc) === stage) { if (root.open && !active) mode(true); resize(); }
     else if (nativeOwned) { nativeOwned = false; mode(false); }
   }
   doc.addEventListener('fullscreenchange', changed); doc.addEventListener('webkitfullscreenchange', changed);
