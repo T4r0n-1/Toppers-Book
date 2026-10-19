@@ -158,3 +158,17 @@ Useful official references:
 - https://firebase.google.com/docs/auth/admin/verify-id-tokens
 - https://developers.cloudflare.com/pages/functions/bindings/
 - https://razorpay.com/docs/payments/payment-gateway/web-integration/standard/integration-steps/
+
+
+## Reader corrections and publication information
+
+The reader and book details link to `/corrections.html`. The reader passes its
+current page and marks illustrative demo reports separately from book reports.
+The form prepares a mailto draft addressed to codetoppers@gmail.com; readers must
+send it themselves. A selectable/copyable draft is available if no email app opens.
+No report is saved or sent by the website.
+
+The page has a public, manually curated corrections list. Keep publication metadata
+and release status up to date when the complete book is published. Use the assigned
+digital ISBN only, and log checked corrections with an actual update date and
+page/question reference. Do not publish customer details or unreviewed suggestions.

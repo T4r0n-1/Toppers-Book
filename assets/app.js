@@ -63,6 +63,7 @@ async function renderPage() {
   const total = activeBook ? activeBook.pageCount : samples.length;
   page = Math.max(0, Math.min(page, total - 1));
   $('#page-label').textContent = `${page + 1} / ${total}`;
+  $('#reader-correction').href = `/corrections.html?source=${activeBook ? 'book' : 'demo'}&page=${page + 1}#suggest`;
   $('#prev-page').disabled = page === 0; $('#next-page').disabled = page === total - 1;
   $$('#reader-contents button').forEach(button => button.classList.toggle('active', Number(button.dataset.page) === page));
   if (!activeBook) { $('#reader-page').innerHTML = `<article class="sample-sheet">${samples[page].html}<div class="sample-watermark" aria-hidden="true">TOPPERS BOOKS · READER PREVIEW</div></article>`; }

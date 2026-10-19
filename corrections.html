@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Suggest a correction and check published updates for Toppers Books educational resources.">
+  <meta name="theme-color" content="#6040b8">
+  <title>Corrections & updates — Toppers Books</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="stylesheet" href="/assets/style.css">
+  <script type="module" src="/assets/corrections.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header"><nav class="nav wrap" aria-label="Main navigation"><a class="brand" href="/">Toppers<span class="brand-period">Books.</span></a><a class="text-link" href="/#collection">Back to our books →</a></nav></header>
+  <main id="main" class="section wrap corrections-page">
+    <p class="eyebrow">HELP MAKE THE NEXT READ CLEARER</p>
+    <h1>Corrections & updates.</h1>
+    <p class="corrections-intro">We aim to make our books clear and accurate, but mistakes can occur. If you spot a problem with a question, solution, formula or diagram, tell us where it appears and what you think should change. We will check suggestions before making changes and record published corrections here.</p>
+    <div class="correction-layout">
+      <section class="correction-card" aria-labelledby="suggest-title" id="suggest">
+        <p class="eyebrow">A QUESTION. A FORMULA. A SMALL DETAIL.</p>
+        <h2 id="suggest-title">Suggest a correction</h2>
+        <p id="correction-context" class="detail-note">CBSE Class 10 Mathematics Standard (041)</p>
+        <p class="muted">This form prepares an email to <a href="mailto:codetoppers@gmail.com">codetoppers@gmail.com</a>. You must send it from your email app to complete your suggestion.</p>
+        <form id="correction-form">
+          <label for="correction-chapter">Chapter (optional)</label>
+          <select id="correction-chapter"><option value="">Select a chapter</option></select>
+          <div class="correction-fields">
+            <div><label for="correction-page">Reader page (optional)</label><input id="correction-page" type="number" min="1" max="100000" step="1" placeholder="e.g. 24"></div>
+            <div><label for="correction-question">Question / section (optional)</label><input id="correction-question" maxlength="80" placeholder="e.g. Q12, solution step 3"></div>
+          </div>
+          <label for="correction-version">Edition / version, if shown (optional)</label><input id="correction-version" maxlength="60" placeholder="e.g. the version shown in your book">
+          <label for="correction-issue">What needs correcting?</label><textarea id="correction-issue" rows="4" required minlength="10" maxlength="1500" placeholder="Describe the mistake and its location."></textarea>
+          <label for="correction-suggestion">Your suggested correction (optional)</label><textarea id="correction-suggestion" rows="3" maxlength="1500" placeholder="Explain the correct steps or answer, if you know them."></textarea>
+          <p class="field-hint correction-hint">Please leave out mobile numbers, payment details and verification links. To add a cropped screenshot, attach it in your email app and hide any personal watermark.</p>
+          <button type="submit" class="button">Prepare correction email →</button>
+        </form>
+        <section id="correction-draft" hidden aria-labelledby="draft-title">
+          <h3 id="draft-title">Your email draft is ready.</h3>
+          <p class="muted">Open your email app and send the message. If it does not open, copy the draft and email it to codetoppers@gmail.com. Nothing has been sent yet.</p>
+          <label for="correction-draft-text">Email draft</label><textarea id="correction-draft-text" rows="10" readonly></textarea>
+          <div class="correction-actions"><a id="correction-email" class="button" href="mailto:codetoppers@gmail.com">Open email app ↗</a><button type="button" id="copy-correction" class="button button-outline">Copy draft</button></div>
+        </section>
+        <p id="correction-status" role="status" aria-live="polite"></p>
+        <noscript><p>Please email your book title, page, question number and suggested correction directly to <a href="mailto:codetoppers@gmail.com">codetoppers@gmail.com</a>.</p></noscript>
+      </section>
+      <aside class="correction-card book-publication" aria-labelledby="publication-title">
+        <p class="eyebrow">ABOUT THIS EDITION</p><h2 id="publication-title">Book information</h2>
+        <h3>CBSE Class 10 Mathematics</h3><p class="muted">Mathematics Standard · 041</p>
+        <dl class="publication-details"><div><dt>Release status</dt><dd>In preparation</dd></div><div><dt>Publish date</dt><dd>To be confirmed at launch</dd></div><div><dt>Web version last updated</dt><dd>No published edition yet</dd></div><div><dt>Digital ISBN</dt><dd>Will be listed once assigned</dd></div><div><dt>Access</dt><dd>Personal online reading for 365 days from verified payment. See <a href="/terms.html">Terms & conditions</a>.</dd></div></dl>
+        <section id="updates" class="published-corrections" aria-labelledby="updates-title"><h3 id="updates-title">Published corrections</h3><p>No corrections have been published yet. The book is being prepared. Confirmed changes to a released edition will be listed here with the date, page or question reference, and correction.</p><p class="muted">A submitted suggestion is not a confirmed correction.</p></section>
+      </aside>
+    </div>
+  </main>
+  <footer class="footer"><div class="wrap"><div class="footer-bottom"><span>Toppers Books · Operated by GUPTA ENTERPRISES</span><a href="/privacy.html">Privacy policy</a><a href="mailto:codetoppers@gmail.com">codetoppers@gmail.com</a></div></div></footer>
+</body>
+</html>
