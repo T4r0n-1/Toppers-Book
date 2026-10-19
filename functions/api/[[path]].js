@@ -175,7 +175,7 @@ async function library(env, user) {
 }
 export function watermarkedPage(image, name, phone, orderId, page) {
   const text = xml(name + ' · ' + phone + ' · ' + orderId);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1190 1684"><image width="1190" height="1684" preserveAspectRatio="xMidYMid meet" href="data:image/png;base64,${image}"/><g font-family="Arial,sans-serif" font-size="22" fill="#12395b" opacity=".16">${[260, 640, 1020, 1400].map(y => `<text x="595" y="${y}" text-anchor="middle" transform="rotate(-25 595 ${y})">${text}</text>`).join('')}</g><rect y="1646" width="1190" height="38" fill="#fff"/><text x="595" y="1671" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#435b6e">Personal reading copy · ${text} · Page ${page}</text></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1190 1724"><image width="1190" height="1684" preserveAspectRatio="xMidYMid meet" href="data:image/png;base64,${image}"/><g font-family="Arial,sans-serif" font-size="22" fill="#12395b" opacity=".16">${[260, 640, 1020, 1400].map(y => `<text x="595" y="${y}" text-anchor="middle" transform="rotate(-25 595 ${y})">${text}</text>`).join('')}</g><rect y="1684" width="1190" height="40" fill="#fff"/><text x="595" y="1710" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#435b6e">Personal reading copy · ${text} · Page ${page}</text></svg>`;
 }
 async function readPage(env, user, id, pageValue) {
   if (id !== BOOK_ID || !/^[1-9]\d{0,4}$/.test(pageValue || '')) fail(404, 'Reading page not found.');

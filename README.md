@@ -172,3 +172,23 @@ The page has a public, manually curated corrections list. Keep publication metad
 and release status up to date when the complete book is published. Use the assigned
 digital ISBN only, and log checked corrections with an actual update date and
 page/question reference. Do not publish customer details or unreviewed suggestions.
+
+
+## Supplied 223-page edition (19 October 2026)
+
+The owner supplied the complete PDF and DOCX. The public assets contain ONLY
+the cover and five selected PDF pages: 5, 14, 15, 69, 180. These replace the old
+illustrative reader demo. Source labels and manuscript claims have not been
+independently audited by this deployment. No original PDF, Word file, full-page
+set or upload ZIP belongs in the public repository.
+
+`assets/book-data.js` holds the public edition/sample metadata. Full paid chapter
+starts are in the private upload package's manifest and registration SQL. The
+package is prepared using `scripts/prepare-book.py` and must be extracted before
+uploading the `cbse10-maths-standard` directory to private R2. Register the actual
+223 pages only after upload. Keep `is_ready=0` and SALES_OPEN false until tests pass.
+
+Private upload and paid-reading end-to-end verification still require the owner's
+Cloudflare account; a successful Pages deployment does not upload private R2
+objects or run D1 SQL. The watermark footer is outside the original image area
+so it does not cover the author/footer text on the supplied pages.
