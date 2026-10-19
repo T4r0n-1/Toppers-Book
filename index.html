@@ -7,8 +7,8 @@
   <meta name="theme-color" content="#6040b8">
   <title>Toppers Books — Make every chapter count.</title>
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
-  <link rel="stylesheet" href="/assets/style.css">
-  <script src="/assets/app.js" type="module"></script>
+  <link rel="stylesheet" href="/assets/style.css?v=reader-2">
+  <script src="/assets/app.js?v=reader-2" type="module"></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -89,7 +89,36 @@
 
   <dialog id="policy-dialog" class="dialog dialog-wide" aria-labelledby="policy-title"><button class="dialog-close icon-button" data-close aria-label="Close policy">×</button><p class="eyebrow">TOPPERS BOOKS · GUPTA ENTERPRISES</p><h2 id="policy-title"></h2><div id="policy-content" class="policy-content"></div></dialog>
 
-  <dialog id="reader-dialog" class="reader-dialog" aria-labelledby="reader-title"><div class="reader-toolbar"><div><p class="eyebrow" id="reader-kicker">PUBLIC BOOK SAMPLE · 5 SELECTED PAGES</p><h2 id="reader-title">Selected pages from the book</h2></div><button class="icon-button" data-close aria-label="Close reader">×</button></div><div class="reader-layout"><aside class="reader-sidebar"><span class="reader-sidebar-label">CONTENTS</span><div id="reader-contents"></div><p id="reader-disclaimer">These are five selected pages from the supplied 223-page edition. Full book access is not included in this sample.</p></aside><div class="reader-main"><div class="reader-controls"><div><button class="icon-button" id="zoom-out" aria-label="Zoom out">−</button><span id="zoom-label">100%</span><button class="icon-button" id="zoom-in" aria-label="Zoom in">+</button></div><button class="text-button" id="reset-zoom">Fit page</button><a class="text-button reader-correction" id="reader-correction" href="/corrections.html?source=sample#suggest" target="_blank" rel="noopener noreferrer">Suggest a correction ↗</a><a class="text-button reader-updates" href="/corrections.html#updates" target="_blank" rel="noopener noreferrer">Corrections & updates ↗</a></div><div class="page-viewport" id="page-viewport"><div id="reader-page" class="reader-page"></div></div><div class="page-navigation"><button class="button button-outline button-small" id="prev-page">← Previous</button><span id="page-label" aria-live="polite"></span><button class="button button-small" id="next-page">Next →</button></div></div></div></dialog>
+  <dialog id="reader-dialog" class="reader-dialog" aria-labelledby="reader-title">
+    <div class="reader-toolbar">
+      <button class="text-button" id="toggle-contents" aria-controls="reader-sidebar" aria-expanded="true">☰ Contents</button>
+      <div class="reader-heading"><p class="eyebrow" id="reader-kicker">PUBLIC BOOK SAMPLE · 5 SELECTED PAGES</p><h2 id="reader-title">Selected pages from the book</h2></div>
+      <button class="text-button" id="reader-fullscreen">Full screen</button>
+      <button class="icon-button" data-close aria-label="Close reader">×</button>
+    </div>
+    <div class="reader-layout">
+      <aside class="reader-sidebar" id="reader-sidebar" aria-label="Book contents">
+        <span class="reader-sidebar-label">CONTENTS · SCROLL FOR ALL CHAPTERS</span>
+        <nav id="reader-contents" aria-label="Chapters" tabindex="0"></nav>
+        <p id="reader-disclaimer">Five selected pages from the supplied 223-page edition.</p>
+      </aside>
+      <div class="reader-main">
+        <div class="reader-controls">
+          <div class="reader-zoom"><button class="icon-button" id="zoom-out" aria-label="Zoom out">−</button><span id="zoom-label">100%</span><button class="icon-button" id="zoom-in" aria-label="Zoom in">+</button></div>
+          <button class="text-button" id="reset-zoom">Fit page</button>
+          <label class="reader-view-label" for="reader-view">View</label><select id="reader-view"><option value="spread">Two pages</option><option value="single">Single page</option></select>
+          <a class="text-button reader-correction" id="reader-correction" href="/corrections.html?source=sample#suggest" target="_blank" rel="noopener noreferrer">Suggest a correction ↗</a>
+          <a class="text-button reader-updates" href="/corrections.html#updates" target="_blank" rel="noopener noreferrer">Updates ↗</a>
+        </div>
+        <div class="page-viewport" id="page-viewport" tabindex="0" aria-label="Reading pages. Use zoom to enlarge and scroll."><div id="reader-page" class="reader-page"></div></div>
+        <div class="page-navigation">
+          <button class="button button-outline button-small" id="prev-page">← Previous</button>
+          <div class="reader-position"><span id="page-label" aria-live="polite"></span><form id="reader-jump"><label for="jump-page">Page</label><input id="jump-page" type="number" min="1" step="1" required aria-label="Go to book page"><button class="text-button" type="submit">Go</button></form></div>
+          <button class="button button-small" id="next-page">Next →</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
 
   <dialog id="checkout-dialog" class="dialog" aria-labelledby="checkout-title"><button class="dialog-close icon-button" data-close aria-label="Close checkout">×</button><p class="eyebrow">YOUR PERSONAL ONLINE COPY</p><h2 id="checkout-title">Complete your purchase</h2><form id="checkout-form"><label for="buyer-name">Reader name</label><input id="buyer-name" autocomplete="name" required maxlength="80" readonly><label for="buyer-phone">Indian mobile number</label><input id="buyer-phone" autocomplete="tel" type="tel" inputmode="tel" required placeholder="10-digit mobile number" readonly><button type="button" class="inline-button checkout-edit-profile" data-action="profile">Edit my profile</button><label for="coupon">Coupon code (optional)</label><input id="coupon" maxlength="30" placeholder="TOPPERS50"><p id="checkout-total" class="detail-note">₹199 · Apply TOPPERS50 for ₹149</p><label class="checkbox-label"><input type="checkbox" id="purchase-consent" required><span>I agree to the Terms and Refund Policy. My name and mobile number will appear on the reading pages. Access lasts 365 days; no download or print access.</span></label><button type="submit" class="button full-width" id="pay-button">Continue to payment →</button><p id="checkout-status" role="status"></p></form></dialog>
   <div id="toast" class="toast" role="status" hidden></div>

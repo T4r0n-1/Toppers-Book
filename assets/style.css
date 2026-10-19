@@ -96,3 +96,53 @@ input:not([type=checkbox]){border-radius:8px;border-color:#c8bdd9}
 .reader-page.is-paid{aspect-ratio:1190/1724}
 .book-sample-page{width:100%;height:100%;object-fit:contain;display:block;background:#fff}
 @media(max-width:760px){.page-navigation #page-label{font-size:9px;text-align:center;line-height:1.5}.reader-controls{display:grid;grid-template-columns:auto 1fr}.reader-controls #reset-zoom{justify-self:end}.reader-controls .reader-updates{justify-self:end}.page-viewport{max-height:calc(100dvh - 280px)}}
+
+/* Full-window book reader: bounded panels and independently scrollable contents. */
+.reader-dialog{position:fixed;inset:0;margin:0;width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;padding:0;border:0;border-radius:0;overflow:hidden;background:#e6e4ec}
+.reader-dialog[open]{display:grid;grid-template-rows:auto minmax(0,1fr)}
+.reader-toolbar{padding:10px 16px;gap:16px;min-height:64px}
+.reader-toolbar .reader-heading{flex:1;min-width:0}
+.reader-toolbar h2{font-size:14px;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reader-toolbar .eyebrow{font-size:8px;line-height:1.4}
+.reader-toolbar>.text-button{font-size:12px;white-space:nowrap;min-height:36px}
+.reader-toolbar>.icon-button{flex-shrink:0;width:36px;height:36px;font-size:28px}
+.reader-layout{position:relative;display:grid;grid-template-columns:250px minmax(0,1fr);grid-template-rows:minmax(0,1fr);min-height:0;max-height:none;overflow:hidden}
+.reader-dialog.contents-hidden .reader-layout{grid-template-columns:minmax(0,1fr)}
+.reader-dialog.contents-hidden .reader-sidebar{display:none}
+.reader-sidebar{display:flex;flex-direction:column;min-height:0;min-width:0;padding:16px 10px 10px;overflow:hidden;background:#faf9fd}
+.reader-sidebar-label{flex-shrink:0;font-size:9px;letter-spacing:.7px;margin:0 10px 12px;line-height:1.7}
+#reader-contents{display:block;flex:1;min-height:0;width:auto;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable;touch-action:pan-y}
+.reader-sidebar button{white-space:normal;width:100%;font-size:12px;padding:10px 12px;border:0;line-height:1.45}
+.reader-sidebar button span{display:block;font-size:10px;margin-top:4px}
+.reader-sidebar button.active{background:#e9e0fa;color:#4b2a94}
+.reader-sidebar p{display:block;flex-shrink:0;margin:12px 10px 0;font-size:10px;line-height:1.6}
+.reader-main{display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-height:0;min-width:0;overflow:hidden}
+.reader-controls{position:static;display:flex;flex-wrap:wrap;gap:8px 12px;min-height:48px;padding:7px 14px;background:#f8f6fc;font-size:11px}
+.reader-controls .reader-zoom{display:flex;align-items:center;gap:5px}
+.reader-controls #zoom-label{min-width:38px;text-align:center;font-variant-numeric:tabular-nums}
+.reader-controls .reader-view-label{display:block;margin:0;font-size:11px}
+.reader-controls select{font:inherit;color:var(--ink);background:white;border:1px solid var(--line);padding:6px 8px;border-radius:5px;min-height:32px}
+.reader-controls .reader-correction{margin-left:auto;font-size:11px}
+.reader-controls .reader-updates{font-size:11px}
+.page-viewport{height:100%;min-height:0;max-height:none;min-width:0;padding:12px;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable both-edges;touch-action:pan-x pan-y pinch-zoom}
+.reader-page,.reader-page.is-paid{display:flex;align-items:flex-start;justify-content:flex-start;gap:var(--spread-gap,8px);max-width:none;aspect-ratio:auto;margin:0 auto;position:relative;transform:none!important;background:transparent;box-shadow:none;overflow:visible}
+.reader-sheet{position:relative;flex:0 0 var(--sheet-width);width:var(--sheet-width);height:100%;min-width:0;background:white;overflow:hidden;box-shadow:0 3px 15px #24213925;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.reader-sheet .paid-page,.reader-sheet .book-sample-page{display:block;width:100%;height:100%;object-fit:contain;background:white;flex:0 0 auto}
+.reader-page.is-spread:after{content:'';position:absolute;top:0;bottom:0;left:50%;width:8px;transform:translateX(-50%);background:linear-gradient(90deg,#23203220,transparent,#23203220);pointer-events:none}
+.reader-page-status{padding:15px;font-size:12px;line-height:1.6;text-align:center;overflow-wrap:anywhere}
+.page-navigation{padding:8px 16px;min-height:60px;background:#f8f6fc;font-size:11px;gap:10px}
+.page-navigation .button{font-size:12px;min-height:36px;padding:8px 15px}
+.reader-position{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;min-width:0}
+#page-label{font-variant-numeric:tabular-nums;white-space:nowrap}
+#reader-jump{display:flex;align-items:center;gap:7px}
+#reader-jump label{margin:0;font-size:11px}
+#reader-jump #jump-page{width:66px;min-height:32px;height:32px;margin:0;padding:4px 6px;font-size:12px}
+#reader-jump button{font-size:12px;min-height:32px}
+#reader-contents:focus-visible,.page-viewport:focus-visible{outline:2px solid #7551c5;outline-offset:-3px}
+@media(max-width:1000px){.reader-layout{grid-template-columns:210px minmax(0,1fr)}.reader-controls .reader-updates{display:none}}
+@media(max-width:760px){
+ .reader-toolbar{min-height:60px;padding:8px;gap:8px}.reader-toolbar h2{font-size:11px}.reader-toolbar .eyebrow{display:none}.reader-toolbar>.text-button{font-size:10px}.reader-toolbar>.icon-button{width:30px}
+ .reader-layout{grid-template-columns:minmax(0,1fr)}.reader-sidebar{position:absolute;inset:0 auto 0 0;width:min(290px,85%);z-index:5;border-right:1px solid var(--line);box-shadow:8px 0 30px #211b4825}.reader-sidebar-label{display:block}.reader-sidebar p{display:block}
+ .reader-controls{display:flex;padding:6px 8px;gap:6px 9px}.reader-controls .reader-correction{font-size:9px;margin-left:auto}.reader-controls .reader-view-label{display:none}.reader-controls select{font-size:10px;max-width:106px}.reader-controls #reset-zoom{font-size:11px}.reader-controls .reader-zoom .icon-button{width:26px;height:28px}
+ .page-viewport{min-height:0;max-height:none;padding:8px}.page-navigation{padding:7px 8px;gap:6px;min-height:62px}.page-navigation .button{font-size:10px;padding:7px 9px;gap:3px}.reader-position{gap:3px;flex-direction:column}.page-navigation #page-label{font-size:10px;line-height:1.4}#reader-jump{gap:4px}#reader-jump label{font-size:9px}#reader-jump #jump-page{width:50px;height:26px;min-height:26px;font-size:10px}#reader-jump button{font-size:10px;min-height:26px}
+}

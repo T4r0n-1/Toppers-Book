@@ -1,3 +1,4 @@
+import { spreadPages, turnPage, fitSpread } from './reader-layout.js';
 import { book as bookEdition } from './book-data.js';
 import { authMessage, emailAuthentication, passwordReset, profileInput } from './auth-helpers.js';
 const $ = (selector, parent = document) => parent.querySelector(selector);
@@ -54,43 +55,126 @@ document.addEventListener('click', async event => {
 });
 $$('dialog').forEach(dialog => dialog.addEventListener('click', event => { if (event.target !== dialog) return; const rect = dialog.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close(); }));
 function resumeKey() { return activeBook && currentUser ? `toppers-reader:${currentUser.uid}:${activeBook.bookId}` : 'toppers-book-sample-page-v1'; }
-function applyZoom() { $('#reader-page').style.transform = `scale(${zoom})`; $('#reader-page').style.marginBottom = zoom > 1 ? `${(zoom - 1) * $('#reader-page').offsetHeight}px` : '0px'; $('#zoom-label').textContent = Math.round(zoom * 100) + '%'; $('#zoom-out').disabled = zoom <= .75; $('#zoom-in').disabled = zoom >= 1.75; }
+let readerMode = 'spread', modeChosen = false;
+function visiblePages() { return spreadPages(page, activeBook ? activeBook.pageCount : samples.length, activeBook ? readerMode : 'single'); }
+function applyZoom() {
+  const viewport = $('#page-viewport');
+  const padding = getComputedStyle(viewport);
+  const width = viewport.clientWidth - parseFloat(padding.paddingLeft) - parseFloat(padding.paddingRight);
+  const height = viewport.clientHeight - parseFloat(padding.paddingTop) - parseFloat(padding.paddingBottom);
+  if (width <= 0 || height <= 0) return;
+  const size = fitSpread(width, height, visiblePages().length, activeBook ? 1190 / 1724 : 595.44 / 841.68, zoom);
+  const spread = $('#reader-page');
+  spread.style.width = `${size.width}px`; spread.style.height = `${size.height}px`;
+  spread.style.setProperty('--sheet-width', `${size.pageWidth}px`);
+  spread.style.setProperty('--spread-gap', `${size.gap}px`);
+  $('#zoom-label').textContent = `${Math.round(zoom * 100)}%`;
+  $('#zoom-out').disabled = zoom <= 1; $('#zoom-in').disabled = zoom >= 3;
+}
 async function renderPage() {
   const request = ++readerRequest;
-  const total = activeBook ? activeBook.pageCount : samples.length;
-  page = Math.max(0, Math.min(page, total - 1));
-  $('#page-label').textContent = activeBook ? `${page + 1} / ${total}` : `Sample ${page + 1} / ${total} · Book p. ${samples[page].page}`;
-  $('#reader-correction').href = `/corrections.html?source=${activeBook ? 'book' : 'sample'}&page=${activeBook ? page + 1 : samples[page].page}#suggest`;
-  $('#prev-page').disabled = page === 0; $('#next-page').disabled = page === total - 1;
-  $$('#reader-contents button').forEach(button => button.classList.toggle('active', Number(button.dataset.page) === page));
-  if (!activeBook) {
-    const image = new Image(); image.alt = `${samples[page].title}, selected sample from book page ${samples[page].page}`;
-    image.className = 'book-sample-page'; image.src = samples[page].src;
-    $('#reader-page').replaceChildren(image);
-  }
-  else {
-    $('#reader-page').textContent = 'Loading your reading page…';
-    try { const data = await api(`read/${encodeURIComponent(activeBook.bookId)}/${page + 1}`); if (request !== readerRequest) return; const image = new Image(); image.alt = `${activeBook.title}, page ${page + 1}, personalised reading copy`; image.className = 'paid-page'; image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(data.svg); $('#reader-page').replaceChildren(image); }
-    catch (error) { if (request !== readerRequest) return; $('#reader-page').textContent = error.message; }
-  }
-  safeStorage('set', resumeKey(), String(page)); $('#page-viewport').scrollTop = 0; applyZoom();
+  const book = activeBook;
+  const total = book ? book.pageCount : samples.length;
+  page = Math.max(0, Math.min(Math.trunc(Number(page)) || 0, total - 1));
+  const visible = visiblePages();
+  const first = visible[0], last = visible.at(-1);
+  $('#page-label').textContent = book ? `${first + 1}${last !== first ? '–' + (last + 1) : ''} / ${total}` : `Sample ${page + 1} / ${total} · Book p. ${samples[page].page}`;
+  $('#jump-page').max = total; $('#jump-page').value = page + 1;
+  $('#reader-correction').href = `/corrections.html?source=${book ? 'book' : 'sample'}&page=${book ? page + 1 : samples[page].page}#suggest`;
+  $('#prev-page').disabled = first === 0; $('#next-page').disabled = last === total - 1;
+  const contents = $$('#reader-contents button');
+  const selected = contents.filter(button => Number(button.dataset.page) <= page).at(-1);
+  contents.forEach(button => { const active = button === selected; button.classList.toggle('active', active); if (active) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current'); });
+  const sheets = visible.map(index => {
+    const sheet = document.createElement('div'); sheet.className = 'reader-sheet'; sheet.dataset.page = index + 1;
+    sheet.setAttribute('aria-label', `Page ${book ? index + 1 : samples[index].page}`);
+    sheet.setAttribute('aria-busy', 'true');
+    const status = document.createElement('p'); status.className = 'reader-page-status'; status.textContent = `Loading page ${book ? index + 1 : samples[index].page}…`; sheet.append(status);
+    return sheet;
+  });
+  $('#reader-page').replaceChildren(...sheets);
+  $('#reader-page').classList.toggle('is-spread', visible.length > 1);
+  safeStorage('set', resumeKey(), String(page));
+  applyZoom(); $('#page-viewport').scrollTop = 0; $('#page-viewport').scrollLeft = 0;
+  await Promise.all(visible.map(async (index, position) => {
+    const sheet = sheets[position];
+    try {
+      const src = book ? 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent((await api(`read/${encodeURIComponent(book.bookId)}/${index + 1}`)).svg) : samples[index].src;
+      if (request !== readerRequest) return;
+      const image = new Image(); image.className = book ? 'paid-page' : 'book-sample-page';
+      image.alt = book ? `${book.title}, page ${index + 1}, personalised reading copy` : `${samples[index].title}, selected sample from book page ${samples[index].page}`;
+      image.src = src;
+      await image.decode();
+      if (request !== readerRequest) return;
+      sheet.replaceChildren(image); sheet.setAttribute('aria-busy', 'false');
+    } catch (error) {
+      if (request !== readerRequest) return;
+      const status = document.createElement('p'); status.className = 'reader-page-status'; status.textContent = `Page ${book ? index + 1 : samples[index].page}: ${error.message || 'Could not load this page.'}`;
+      const retry = document.createElement('button'); retry.className = 'text-button'; retry.textContent = 'Try again'; retry.addEventListener('click', renderPage);
+      sheet.replaceChildren(status, retry); sheet.setAttribute('aria-busy', 'false');
+    }
+  }));
+}
+function setContents(open) {
+  $('#reader-dialog').classList.toggle('contents-hidden', !open);
+  $('#toggle-contents').setAttribute('aria-expanded', String(open));
+  requestAnimationFrame(applyZoom);
 }
 function startReader(book = null) {
-  activeBook = book; zoom = 1; page = Math.max(0, Number(safeStorage('get', resumeKey())) || 0);
+  activeBook = book; zoom = 1; modeChosen = false;
+  readerMode = book && matchMedia('(min-width: 900px)').matches ? 'spread' : 'single';
+  $('#reader-view').value = readerMode; $('#reader-view').disabled = !book;
+  page = Math.max(0, Number(safeStorage('get', resumeKey())) || 0);
   $('#reader-title').textContent = book ? book.title : 'Selected pages from the book';
   $('#reader-kicker').textContent = book ? 'YOUR PERSONALISED READING COPY' : 'PUBLIC BOOK SAMPLE · 5 SELECTED PAGES';
-  $('#reader-disclaimer').textContent = book ? 'Your purchased pages are personalised. Please keep your account and reading copy private.' : 'These are five selected pages from the supplied 223-page edition. Full book access is not included in this sample.';
+  $('#reader-disclaimer').textContent = book ? 'Personalised online reading. Scroll here for all chapters. Use Next to turn the book.' : 'Five selected pages from the supplied 223-page edition. Full book access is not included.';
   const contents = book ? book.chapters : samples.map((s, i) => ({ title: s.title, subtitle: s.subtitle, page: i + 1 }));
-  $('#reader-contents').replaceChildren(...contents.map(entry => { const button = document.createElement('button'); button.textContent = entry.title; button.dataset.page = entry.page - 1; const subtitle = document.createElement('span'); subtitle.textContent = entry.subtitle || `Page ${entry.page}`; button.append(subtitle); button.addEventListener('click', () => { page = entry.page - 1; renderPage(); }); return button; }));
+  $('#reader-contents').replaceChildren(...contents.map(entry => {
+    const button = document.createElement('button'); button.textContent = entry.title; button.dataset.page = entry.page - 1;
+    const subtitle = document.createElement('span'); subtitle.textContent = entry.subtitle || `Page ${entry.page}`; button.append(subtitle);
+    button.addEventListener('click', () => { page = entry.page - 1; zoom = 1; if (matchMedia('(max-width: 760px)').matches) setContents(false); renderPage(); });
+    return button;
+  }));
   $('#reader-page').classList.toggle('is-paid', !!book);
-  openDialog('#reader-dialog'); renderPage();
+  setContents(matchMedia('(min-width: 761px)').matches);
+  openDialog('#reader-dialog'); $('#reader-contents').scrollTop = 0; renderPage();
 }
-$('#reader-dialog').addEventListener('close', () => { ++readerRequest; activeBook = null; $('#reader-page').replaceChildren(); });
-$('#prev-page').addEventListener('click', () => { page--; renderPage(); });
-$('#next-page').addEventListener('click', () => { page++; renderPage(); });
-$('#zoom-in').addEventListener('click', () => { zoom = Math.min(1.75, zoom + .25); applyZoom(); });
-$('#zoom-out').addEventListener('click', () => { zoom = Math.max(.75, zoom - .25); applyZoom(); });
-$('#reset-zoom').addEventListener('click', () => { zoom = 1; applyZoom(); });
+$('#reader-dialog').addEventListener('close', () => {
+  ++readerRequest; activeBook = null; $('#reader-page').replaceChildren();
+  if (document.fullscreenElement === $('#reader-dialog')) document.exitFullscreen?.().catch(() => {});
+});
+function navigateReader(direction) {
+  page = turnPage(page, activeBook ? activeBook.pageCount : samples.length, activeBook ? readerMode : 'single', direction);
+  renderPage();
+}
+$('#prev-page').addEventListener('click', () => navigateReader(-1));
+$('#next-page').addEventListener('click', () => navigateReader(1));
+$('#zoom-in').addEventListener('click', () => { zoom = Math.min(3, zoom + .25); applyZoom(); });
+$('#zoom-out').addEventListener('click', () => { zoom = Math.max(1, zoom - .25); applyZoom(); });
+$('#reset-zoom').addEventListener('click', () => { zoom = 1; applyZoom(); $('#page-viewport').scrollTop = 0; $('#page-viewport').scrollLeft = 0; });
+$('#reader-view').addEventListener('change', event => { readerMode = event.target.value; modeChosen = true; zoom = 1; renderPage(); });
+$('#toggle-contents').addEventListener('click', () => setContents($('#reader-dialog').classList.contains('contents-hidden')));
+$('#reader-jump').addEventListener('submit', event => { event.preventDefault(); if (!$('#reader-jump').reportValidity()) return; page = Number($('#jump-page').value) - 1; zoom = 1; renderPage(); });
+$('#reader-fullscreen').addEventListener('click', async () => {
+  try {
+    if (document.fullscreenElement === $('#reader-dialog')) await document.exitFullscreen();
+    else if ($('#reader-dialog').requestFullscreen) await $('#reader-dialog').requestFullscreen();
+    else notify('The reader already fills your browser. Use your browser’s full-screen option to hide its toolbar.');
+  } catch { notify('Use your browser’s full-screen option to hide its toolbar.'); }
+});
+document.addEventListener('fullscreenchange', () => { $('#reader-fullscreen').textContent = document.fullscreenElement === $('#reader-dialog') ? 'Exit full screen' : 'Full screen'; requestAnimationFrame(applyZoom); });
+$('#reader-dialog').addEventListener('keydown', event => {
+  if (event.target.closest('button, input, select, a, .reader-sidebar')) return;
+  if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') { event.preventDefault(); navigateReader(event.key === 'ArrowRight' ? 1 : -1); }
+});
+new ResizeObserver(() => { if ($('#reader-dialog').open) applyZoom(); }).observe($('#page-viewport'));
+window.addEventListener('resize', () => {
+  if (!$('#reader-dialog').open) return;
+  if (activeBook && !modeChosen) {
+    const next = matchMedia('(min-width: 900px)').matches ? 'spread' : 'single';
+    if (next !== readerMode) { readerMode = next; $('#reader-view').value = next; renderPage(); }
+  }
+});
 function emptyLibrary(title, description, action, text) {
   $('#library-content').innerHTML = '<div class="empty-library-icon" aria-hidden="true">▤</div><h2></h2><p></p><button class="button"></button>';
   $('#library-content h2').textContent = title; $('#library-content p').textContent = description;
@@ -169,7 +253,7 @@ async function showLibrary() {
     if (!data.books.length) { emptyLibrary('Your next chapter is on its way.', 'You have no purchased books yet. Explore the complete Class 10 Mathematics edition and its selected sample pages.', 'home', 'Explore the store →'); return; }
     $('#library-content').replaceChildren(...data.books.map(book => {
       const article = document.createElement('article'); article.className = 'owned-book';
-      const image = new Image(); image.src = '/assets/maths-cover.svg'; image.alt = book.title;
+      const image = new Image(); image.src = '/assets/maths-cover.webp'; image.alt = book.title;
       const copy = document.createElement('div'); const h3 = document.createElement('h3'); h3.textContent = book.title;
       const expiry = document.createElement('p'); expiry.textContent = `${book.active ? 'Access until' : 'Access ended'} ${new Date(book.expiresAt * 1000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`;
       const button = document.createElement('button'); button.className = 'button button-small'; button.textContent = book.active ? 'Continue reading →' : 'Access expired'; button.disabled = !book.active; button.addEventListener('click', () => startReader(book));
@@ -318,7 +402,7 @@ async function initialise() {
         const previousUid = currentUser?.uid;
         currentUser = user;
         $('#account-button').textContent = user ? 'My account ↗' : 'Sign in ↗';
-        if (previousUid !== user?.uid) { verificationSentAt = 0; ++profileRequest; currentProfile = null; profileOwner = null; }
+        if (previousUid !== user?.uid) { if (activeBook && $('#reader-dialog').open) $('#reader-dialog').close(); verificationSentAt = 0; ++profileRequest; currentProfile = null; profileOwner = null; }
         renderAuthState();
         if (location.hash === '#library') showLibrary();
         if (user) loadProfile();
