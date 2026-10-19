@@ -7,8 +7,8 @@
   <meta name="theme-color" content="#6040b8">
   <title>Toppers Books — Make every chapter count.</title>
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
-  <link rel="stylesheet" href="/assets/style.css?v=reader-2">
-  <script src="/assets/app.js?v=reader-2" type="module"></script>
+  <link rel="stylesheet" href="/assets/style.css?v=reader-4">
+  <script src="/assets/app.js?v=reader-4" type="module"></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -113,7 +113,7 @@
         <div class="page-viewport" id="page-viewport" tabindex="0" aria-label="Reading pages. Use zoom to enlarge and scroll."><div id="reader-page" class="reader-page"></div></div>
         <div class="page-navigation">
           <button class="button button-outline button-small" id="prev-page">← Previous</button>
-          <div class="reader-position"><span id="page-label" aria-live="polite"></span><form id="reader-jump"><label for="jump-page">Page</label><input id="jump-page" type="number" min="1" step="1" required aria-label="Go to book page"><button class="text-button" type="submit">Go</button></form></div>
+          <div class="reader-position"><span id="page-label" aria-live="polite"></span><form id="reader-jump"><label for="jump-page">Page</label><button class="page-arrow" id="jump-prev" type="button" aria-label="Turn to previous pages">←</button><input id="jump-page" type="number" inputmode="numeric" min="1" step="1" required aria-label="Go to book page"><button class="page-arrow" id="jump-next" type="button" aria-label="Turn to next pages">→</button><button class="text-button" type="submit">Go</button></form></div>
           <button class="button button-small" id="next-page">Next →</button>
         </div>
       </div>

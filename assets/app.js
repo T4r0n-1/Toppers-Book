@@ -82,6 +82,7 @@ async function renderPage() {
   $('#jump-page').max = total; $('#jump-page').value = page + 1;
   $('#reader-correction').href = `/corrections.html?source=${book ? 'book' : 'sample'}&page=${book ? page + 1 : samples[page].page}#suggest`;
   $('#prev-page').disabled = first === 0; $('#next-page').disabled = last === total - 1;
+  $('#jump-prev').disabled = first === 0; $('#jump-next').disabled = last === total - 1;
   const contents = $$('#reader-contents button');
   const selected = contents.filter(button => Number(button.dataset.page) <= page).at(-1);
   contents.forEach(button => { const active = button === selected; button.classList.toggle('active', active); if (active) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current'); });
@@ -101,7 +102,7 @@ async function renderPage() {
     try {
       const src = book ? 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent((await api(`read/${encodeURIComponent(book.bookId)}/${index + 1}`)).svg) : samples[index].src;
       if (request !== readerRequest) return;
-      const image = new Image(); image.className = book ? 'paid-page' : 'book-sample-page';
+      const image = new Image(); image.draggable = false; image.className = book ? 'paid-page' : 'book-sample-page';
       image.alt = book ? `${book.title}, page ${index + 1}, personalised reading copy` : `${samples[index].title}, selected sample from book page ${samples[index].page}`;
       image.src = src;
       await image.decode();
@@ -149,6 +150,8 @@ function navigateReader(direction) {
 }
 $('#prev-page').addEventListener('click', () => navigateReader(-1));
 $('#next-page').addEventListener('click', () => navigateReader(1));
+$('#jump-prev').addEventListener('click', () => navigateReader(-1));
+$('#jump-next').addEventListener('click', () => navigateReader(1));
 $('#zoom-in').addEventListener('click', () => { zoom = Math.min(3, zoom + .25); applyZoom(); });
 $('#zoom-out').addEventListener('click', () => { zoom = Math.max(1, zoom - .25); applyZoom(); });
 $('#reset-zoom').addEventListener('click', () => { zoom = 1; applyZoom(); $('#page-viewport').scrollTop = 0; $('#page-viewport').scrollLeft = 0; });
@@ -163,6 +166,13 @@ $('#reader-fullscreen').addEventListener('click', async () => {
   } catch { notify('Use your browser’s full-screen option to hide its toolbar.'); }
 });
 document.addEventListener('fullscreenchange', () => { $('#reader-fullscreen').textContent = document.fullscreenElement === $('#reader-dialog') ? 'Exit full screen' : 'Full screen'; requestAnimationFrame(applyZoom); });
+// Discourage ordinary copying of rendered pages; this is not screenshot protection.
+for (const type of ['contextmenu', 'dragstart', 'selectstart', 'copy', 'cut']) {
+  $('#page-viewport').addEventListener(type, event => event.preventDefault());
+}
+$('#reader-dialog').addEventListener('copy', event => {
+  if (!event.target.closest('input, textarea')) event.preventDefault();
+});
 $('#reader-dialog').addEventListener('keydown', event => {
   if (event.target.closest('button, input, select, a, .reader-sidebar')) return;
   if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') { event.preventDefault(); navigateReader(event.key === 'ArrowRight' ? 1 : -1); }
