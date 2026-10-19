@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check assets/reader-gestures.js && node --check assets/rough-pad.js && node --check assets/reader-layout.js && node --check assets/book-data.js && node --check assets/corrections.js && node --check assets/app.js && node --check assets/auth-helpers.js && node --check assets/firebase-config.js && node --check 'functions/api/[[path]].js'",
+    "check": "node --check assets/practice.js && node --check assets/practice-bank.js && node --check assets/practice-engine.js && node --check assets/reader-gestures.js && node --check assets/rough-pad.js && node --check assets/reader-layout.js && node --check assets/book-data.js && node --check assets/corrections.js && node --check assets/app.js && node --check assets/auth-helpers.js && node --check assets/firebase-config.js && node --check 'functions/api/[[path]].js'",
     "test": "node --test tests/*.test.js"
   }
 }

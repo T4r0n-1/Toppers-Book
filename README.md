@@ -207,3 +207,19 @@ D1 or R2 and do not sync across devices. A storage failure is shown in the pad.
 Clearing browser data removes drafts. These tools never edit book content.
 Credential failures show the same invalid-email/password message for missing
 accounts and wrong passwords, both in the summary and next to the password field.
+
+
+## Free Maths practice
+
+`/practice.html` is a public Class 10 concept-practice area, separate from paid
+reading entitlements. The initial original bank has 28 questions (two per chapter),
+with mixed (14), full (28) and chapter (2) sessions. They are not labelled as PYQs.
+The browser computes marks, attempted accuracy and a per-chapter sample snapshot;
+no AI or diagnostic mastery claim is involved. Worked explanations are reviewed
+with the question bank. Tests cover grading and selection invariants.
+
+A timed session uses an absolute deadline and submits when it expires, including
+after resuming. One draft/result is kept in localStorage when available; it is not
+saved to the customer account or synced. This client-side practice bank is not a
+secure examination service. Notebook-photo analysis is not connected in this
+release: it needs a separately configured AI backend and private image handling.
