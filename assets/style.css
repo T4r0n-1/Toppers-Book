@@ -205,3 +205,20 @@ input:not([type=checkbox]){border-radius:8px;border-color:#c8bdd9}
 .reading-workspace .page-viewport{overscroll-behavior-x:none}
 
 .practice-store-card{display:grid;grid-template-columns:1.4fr 1fr;gap:40px;padding:45px;background:#efe8fa;border:1px solid #ded0f0;border-radius:16px}.practice-store-card h2{font-size:38px;letter-spacing:-1px}.practice-store-card p{font-size:13px;line-height:1.9;color:var(--muted);margin:20px 0}.practice-store-details{display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fffcf8;border-radius:12px;padding:25px;text-align:center}.practice-store-details>span{font-family:var(--serif);font-size:75px;line-height:1.2;color:#6040b8}.practice-store-details>strong{font-size:14px}.practice-store-details>small{font-size:11px;color:#146b62}.practice-store-details p{margin:16px 0}@media(max-width:760px){.practice-store-card{grid-template-columns:minmax(0,1fr);padding:25px;gap:25px}.practice-store-card h2{font-size:30px}.practice-store-card .button{font-size:11px}.practice-store-details{padding:18px}.practice-store-details>span{font-size:55px}}
+
+/* Full-screen controls overlay the page, so hiding them does not move the book. */
+.reader-dialog.is-reader-fullscreen[open]{display:block;--focus-toolbar-height:64px}
+.is-reader-fullscreen .reader-layout,.is-reader-fullscreen .reader-main{display:block;height:100%;max-height:none}
+.is-reader-fullscreen .reading-workspace{height:100%}
+.is-reader-fullscreen .reader-toolbar{position:absolute;inset:0 0 auto;z-index:20;height:var(--focus-toolbar-height);background:#faf9fdf5}
+.is-reader-fullscreen .reader-controls{position:absolute;top:var(--focus-toolbar-height);left:0;right:0;z-index:20;background:#f8f6fcf5}
+.is-reader-fullscreen .page-navigation{position:absolute;bottom:0;left:0;right:0;z-index:20;background:#f8f6fcf5;padding-bottom:max(8px,env(safe-area-inset-bottom))}
+.is-reader-fullscreen .reader-sidebar{position:absolute;top:calc(var(--focus-toolbar-height) + 70px);bottom:72px;left:0;width:min(290px,85%);z-index:25;height:auto;box-shadow:8px 0 30px #211b4825}
+.is-reader-fullscreen .reader-toolbar,.is-reader-fullscreen .reader-controls,.is-reader-fullscreen .page-navigation,.is-reader-fullscreen .rough-launcher{transition:opacity .15s,visibility .15s}
+.is-reader-fullscreen.focus-controls-hidden .reader-toolbar,.is-reader-fullscreen.focus-controls-hidden .reader-controls,.is-reader-fullscreen.focus-controls-hidden .page-navigation,.is-reader-fullscreen.focus-controls-hidden .rough-launcher{opacity:0;visibility:hidden;pointer-events:none}
+.reader-focus-hint{position:absolute;bottom:max(12px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:10;max-width:90%;white-space:nowrap;pointer-events:none;border-radius:20px;background:#241e46b8;color:white;padding:5px 12px;font-size:10px}
+.reader-focus-hint[hidden],#reader-lock[hidden]{display:none}
+.reader-locked .page-viewport{cursor:default}
+.reader-locked button:disabled{cursor:default}
+@media(max-width:760px){.reader-dialog.is-reader-fullscreen[open]{--focus-toolbar-height:54px}.reader-toolbar #reader-lock{font-size:10px;flex:0 0 auto}.is-reader-fullscreen .reader-toolbar{padding-top:max(8px,env(safe-area-inset-top))}}
+@media(prefers-reduced-motion:reduce){.is-reader-fullscreen .reader-toolbar,.is-reader-fullscreen .reader-controls,.is-reader-fullscreen .page-navigation,.is-reader-fullscreen .rough-launcher{transition:none}}

@@ -1,5 +1,6 @@
 import { spreadPages, turnPage, fitSpread } from './reader-layout.js';
 import { bindReaderGestures } from './reader-gestures.js';
+import { setupReaderFullscreen } from './reader-fullscreen.js';
 import { setupRoughPads } from './rough-pad.js';
 import { book as bookEdition } from './book-data.js';
 import { authMessage, emailAuthentication, passwordReset, profileInput } from './auth-helpers.js';
@@ -59,6 +60,13 @@ $$('dialog').forEach(dialog => dialog.addEventListener('click', event => { if (e
 function resumeKey() { return activeBook && currentUser ? `toppers-reader:${currentUser.uid}:${activeBook.bookId}` : 'toppers-book-sample-page-v1'; }
 let readerMode = 'spread', modeChosen = false, turnTimer = null;
 const roughPads = setupRoughPads($('#reader-dialog'), () => ({ uid: currentUser?.uid || 'sample', book: activeBook?.bookId || 'sample' }));
+const readerPresentation = setupReaderFullscreen($('#reader-dialog'), {
+  onResize: applyZoom,
+  onMessage: notify,
+  onEnter: () => { setContents(false); roughPads.closeAll(); resetPageTurn(); },
+  onLock: () => { setContents(false); roughPads.closeAll(); readerGestures.reset(); resetPageTurn(); },
+  canHide: () => $('#reader-dialog').classList.contains('contents-hidden') && !$('#reader-dialog').querySelector('.rough-pad:not([hidden])')
+});
 function resetPageTurn() {
   clearTimeout(turnTimer); turnTimer = null;
   const spread = $('#reader-page'); spread.classList.remove('is-dragging', 'is-turning'); spread.style.removeProperty('--turn-x'); spread.style.removeProperty('--turn-angle');
@@ -142,7 +150,7 @@ function startReader(book = null) {
   $('#reader-contents').replaceChildren(...contents.map(entry => {
     const button = document.createElement('button'); button.textContent = entry.title; button.dataset.page = entry.page - 1;
     const subtitle = document.createElement('span'); subtitle.textContent = entry.subtitle || `Page ${entry.page}`; button.append(subtitle);
-    button.addEventListener('click', () => { page = entry.page - 1; zoom = 1; if (matchMedia('(max-width: 760px)').matches) setContents(false); renderPage(); });
+    button.addEventListener('click', () => { if (readerPresentation.locked) return; page = entry.page - 1; zoom = 1; if (matchMedia('(max-width: 760px)').matches) setContents(false); renderPage(); });
     return button;
   }));
   $('#reader-page').classList.toggle('is-paid', !!book);
@@ -152,9 +160,10 @@ function startReader(book = null) {
 }
 $('#reader-dialog').addEventListener('close', () => {
   ++readerRequest; readerGestures.reset(); resetPageTurn(); roughPads.closeAll(); activeBook = null; $('#reader-page').replaceChildren();
-  if (document.fullscreenElement === $('#reader-dialog')) document.exitFullscreen?.().catch(() => {});
+  readerPresentation.close();
 });
 function navigateReader(direction) {
+  if (readerPresentation.locked) return;
   if (turnTimer !== null) return;
   const total = activeBook ? activeBook.pageCount : samples.length;
   const mode = activeBook ? readerMode : 'single';
@@ -169,7 +178,7 @@ function navigateReader(direction) {
 }
 const readingViewport = $('#page-viewport');
 const readerGestures = bindReaderGestures(readingViewport, {
-  enabled: () => $('#reader-dialog').open && zoom === 1,
+  enabled: () => $('#reader-dialog').open && zoom === 1 && !readerPresentation.locked,
   onTurn: navigateReader,
   onReset: () => { if (turnTimer === null) resetPageTurn(); },
   onDrag: dx => {
@@ -188,15 +197,7 @@ $('#zoom-out').addEventListener('click', () => { zoom = Math.max(1, zoom - .25);
 $('#reset-zoom').addEventListener('click', () => { zoom = 1; applyZoom(); $('#page-viewport').scrollTop = 0; $('#page-viewport').scrollLeft = 0; });
 $('#reader-view').addEventListener('change', event => { readerMode = event.target.value; modeChosen = true; zoom = 1; renderPage(); });
 $('#toggle-contents').addEventListener('click', () => setContents($('#reader-dialog').classList.contains('contents-hidden')));
-$('#reader-jump').addEventListener('submit', event => { event.preventDefault(); if (!$('#reader-jump').reportValidity()) return; page = Number($('#jump-page').value) - 1; zoom = 1; renderPage(); });
-$('#reader-fullscreen').addEventListener('click', async () => {
-  try {
-    if (document.fullscreenElement === $('#reader-dialog')) await document.exitFullscreen();
-    else if ($('#reader-dialog').requestFullscreen) await $('#reader-dialog').requestFullscreen();
-    else notify('The reader already fills your browser. Use your browser’s full-screen option to hide its toolbar.');
-  } catch { notify('Use your browser’s full-screen option to hide its toolbar.'); }
-});
-document.addEventListener('fullscreenchange', () => { $('#reader-fullscreen').textContent = document.fullscreenElement === $('#reader-dialog') ? 'Exit full screen' : 'Full screen'; requestAnimationFrame(applyZoom); });
+$('#reader-jump').addEventListener('submit', event => { event.preventDefault(); if (readerPresentation.locked) return; if (!$('#reader-jump').reportValidity()) return; page = Number($('#jump-page').value) - 1; zoom = 1; renderPage(); });
 // Discourage ordinary copying of rendered pages; this is not screenshot protection.
 for (const type of ['contextmenu', 'dragstart', 'selectstart', 'copy', 'cut']) {
   $('#page-viewport').addEventListener(type, event => event.preventDefault());

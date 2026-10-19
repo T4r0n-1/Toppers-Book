@@ -7,8 +7,8 @@
   <meta name="theme-color" content="#6040b8">
   <title>Toppers Books — Make every chapter count.</title>
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
-  <link rel="stylesheet" href="/assets/style.css?v=practice-1">
-  <script src="/assets/app.js?v=practice-1" type="module"></script>
+  <link rel="stylesheet" href="/assets/style.css?v=fullscreen-2">
+  <script src="/assets/app.js?v=fullscreen-2" type="module"></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -95,7 +95,8 @@
     <div class="reader-toolbar">
       <button class="text-button" id="toggle-contents" aria-controls="reader-sidebar" aria-expanded="true">☰ Contents</button>
       <div class="reader-heading"><p class="eyebrow" id="reader-kicker">PUBLIC BOOK SAMPLE · 5 SELECTED PAGES</p><h2 id="reader-title">Selected pages from the book</h2></div>
-      <button class="text-button" id="reader-fullscreen">Full screen</button>
+      <button class="text-button" id="reader-lock" aria-pressed="false" aria-label="Lock reading controls" hidden>🔓 Lock</button>
+      <button class="text-button" id="reader-fullscreen" aria-pressed="false" aria-label="Enter full-screen reading">Full screen</button>
       <button class="icon-button" data-close aria-label="Close reader">×</button>
     </div>
     <div class="reader-layout">
@@ -112,6 +113,7 @@
           <a class="text-button reader-correction" id="reader-correction" href="/corrections.html?source=sample#suggest" target="_blank" rel="noopener noreferrer">Suggest a correction ↗</a>
         </div>
         <div class="reading-workspace" id="reading-workspace">
+          <span class="reader-focus-hint" id="reader-focus-hint" hidden></span>
           <button type="button" class="rough-launcher rough-launcher-left" data-open-rough="left" aria-controls="rough-pad-left" aria-expanded="false" aria-label="Open left rough-work pad">✎<span>Rough</span></button>
           <aside id="rough-pad-left" class="rough-pad rough-pad-left" data-rough-pad="left" aria-label="Left rough-work pad" hidden></aside>
           <div class="page-viewport" id="page-viewport" tabindex="0" aria-label="Reading pages. Swipe left or right to turn pages at Fit page zoom."><div id="reader-page" class="reader-page"></div></div>
