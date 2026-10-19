@@ -1,4 +1,5 @@
-import { spreadPages, turnPage, fitSpread, swipeDirection } from './reader-layout.js';
+import { spreadPages, turnPage, fitSpread } from './reader-layout.js';
+import { bindReaderGestures } from './reader-gestures.js';
 import { setupRoughPads } from './rough-pad.js';
 import { book as bookEdition } from './book-data.js';
 import { authMessage, emailAuthentication, passwordReset, profileInput } from './auth-helpers.js';
@@ -56,7 +57,7 @@ document.addEventListener('click', async event => {
 });
 $$('dialog').forEach(dialog => dialog.addEventListener('click', event => { if (event.target !== dialog) return; const rect = dialog.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close(); }));
 function resumeKey() { return activeBook && currentUser ? `toppers-reader:${currentUser.uid}:${activeBook.bookId}` : 'toppers-book-sample-page-v1'; }
-let readerMode = 'spread', modeChosen = false, turnTimer = null, gesture = null;
+let readerMode = 'spread', modeChosen = false, turnTimer = null;
 const roughPads = setupRoughPads($('#reader-dialog'), () => ({ uid: currentUser?.uid || 'sample', book: activeBook?.bookId || 'sample' }));
 function resetPageTurn() {
   clearTimeout(turnTimer); turnTimer = null;
@@ -150,7 +151,7 @@ function startReader(book = null) {
   openDialog('#reader-dialog'); $('#reader-contents').scrollTop = 0; renderPage();
 }
 $('#reader-dialog').addEventListener('close', () => {
-  ++readerRequest; gesture = null; resetPageTurn(); roughPads.closeAll(); activeBook = null; $('#reader-page').replaceChildren();
+  ++readerRequest; readerGestures.reset(); resetPageTurn(); roughPads.closeAll(); activeBook = null; $('#reader-page').replaceChildren();
   if (document.fullscreenElement === $('#reader-dialog')) document.exitFullscreen?.().catch(() => {});
 });
 function navigateReader(direction) {
@@ -167,30 +168,17 @@ function navigateReader(direction) {
   turnTimer = setTimeout(() => { turnTimer = null; if (!$('#reader-dialog').open) return; page = target; renderPage(); }, 145);
 }
 const readingViewport = $('#page-viewport');
-readingViewport.addEventListener('pointerdown', event => {
-  if (event.isPrimary === false) { gesture = null; resetPageTurn(); return; }
-  if (zoom !== 1 || event.button !== 0 || turnTimer !== null || event.target.closest('button, a')) return;
-  gesture = { x: event.clientX, y: event.clientY, started: performance.now(), id: event.pointerId };
-  readingViewport.setPointerCapture(event.pointerId);
+const readerGestures = bindReaderGestures(readingViewport, {
+  enabled: () => $('#reader-dialog').open && zoom === 1,
+  onTurn: navigateReader,
+  onReset: () => { if (turnTimer === null) resetPageTurn(); },
+  onDrag: dx => {
+    if (turnTimer !== null) return;
+    const spread = $('#reader-page'); spread.classList.add('is-dragging');
+    spread.style.setProperty('--turn-x', `${Math.max(-100, Math.min(100, dx * .35))}px`);
+    spread.style.setProperty('--turn-angle', `${Math.max(-7, Math.min(7, dx * .025))}deg`);
+  }
 });
-readingViewport.addEventListener('pointermove', event => {
-  if (!gesture || gesture.id !== event.pointerId) return;
-  const dx = event.clientX - gesture.x, dy = event.clientY - gesture.y;
-  if (Math.abs(dy) > 20 && Math.abs(dy) > Math.abs(dx)) { gesture = null; resetPageTurn(); return; }
-  if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(dy) * 1.3) return;
-  const spread = $('#reader-page'); spread.classList.add('is-dragging');
-  spread.style.setProperty('--turn-x', `${Math.max(-100, Math.min(100, dx * .35))}px`);
-  spread.style.setProperty('--turn-angle', `${Math.max(-7, Math.min(7, dx * .025))}deg`);
-});
-readingViewport.addEventListener('pointerup', event => {
-  const start = gesture; gesture = null;
-  if (!start || start.id !== event.pointerId) return;
-  const direction = swipeDirection(event.clientX - start.x, event.clientY - start.y, performance.now() - start.started, readingViewport.clientWidth, zoom);
-  resetPageTurn();
-  if (direction) navigateReader(direction);
-});
-readingViewport.addEventListener('pointercancel', () => { gesture = null; resetPageTurn(); });
-readingViewport.addEventListener('lostpointercapture', () => { if (gesture) { gesture = null; resetPageTurn(); } });
 $('#prev-page').addEventListener('click', () => navigateReader(-1));
 $('#next-page').addEventListener('click', () => navigateReader(1));
 $('#jump-prev').addEventListener('click', () => navigateReader(-1));

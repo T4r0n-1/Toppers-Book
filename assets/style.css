@@ -200,3 +200,6 @@ input:not([type=checkbox]){border-radius:8px;border-color:#c8bdd9}
 }
 @media(prefers-reduced-motion:reduce){.reader-page{transition:none}.reader-page.is-dragging,.reader-page.is-turning{transform:none!important;opacity:1}}
 @media print{.reader-dialog,.reader-dialog[open],.rough-pad{display:none!important}}
+
+/* Keep horizontal gestures in the reading surface instead of scroll chaining. */
+.reading-workspace .page-viewport{overscroll-behavior-x:none}
