@@ -53,7 +53,7 @@ document.addEventListener('click', async event => {
   if (action === 'profile') await openProfile();
   if (action === 'checkout') {
     if (!currentUser?.emailVerified) openDialog('#login-dialog');
-    else { await loadProfile(); if (!currentProfile) { await openProfile(); return; } $('#buyer-name').value = currentProfile.name; $('#buyer-phone').value = currentProfile.phone; openDialog('#checkout-dialog'); }
+    else { await loadProfile(); if (!currentProfile) { await openProfile(); return; } $('#buyer-name').value = currentProfile.name; $('#buyer-phone').value = currentProfile.phone; updateCouponTotal(); $('#checkout-status').textContent = ''; openDialog('#checkout-dialog'); }
   }
 });
 $$('dialog').forEach(dialog => dialog.addEventListener('click', event => { if (event.target !== dialog) return; const rect = dialog.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close(); }));
@@ -437,7 +437,7 @@ $('#check-verification').addEventListener('click', async () => {
 });
 function loadScript(src) { return new Promise((resolve, reject) => { const script = document.createElement('script'); script.src = src; script.onload = resolve; script.onerror = reject; document.head.append(script); }); }
 $('#checkout-form').addEventListener('submit', async event => {
-  event.preventDefault(); if (!config.checkoutEnabled || !currentUser) { $('#checkout-status').textContent = 'Purchases are not open yet.'; return; }
+  event.preventDefault(); updateCouponTotal(); if (!config.checkoutEnabled || !currentUser) { $('#checkout-status').textContent = 'Purchases are not open yet.'; return; }
   if (config.liveTest && !window.confirm('This is a LIVE payment test. Real money will be charged: ₹199, or ₹149 with TOPPERS50. Continue?')) return;
   const button = $('#pay-button'); button.disabled = true; $('#checkout-status').textContent = 'Preparing your order…';
   try {
@@ -453,7 +453,9 @@ $('#checkout-form').addEventListener('submit', async event => {
     checkout.open();
   } catch (error) { $('#checkout-status').textContent = error.message; button.disabled = false; if (currentUser) openDialog('#checkout-dialog'); }
 });
-$('#coupon').addEventListener('input', () => { const code = $('#coupon').value.trim().toUpperCase(); $('#checkout-total').textContent = code === 'TOPPERS50' ? '₹199 − ₹50 = ₹149 · 365-day online access' : code ? 'Coupon will be validated before payment.' : '₹199 · Apply TOPPERS50 for ₹149'; });
+function updateCouponTotal() { const code = $('#coupon').value.trim().toUpperCase(); $('#checkout-total').textContent = code === 'TOPPERS50' ? '₹199 − ₹50 = ₹149 · 365-day online access' : code ? 'Coupon will be validated before payment.' : '₹199 · Apply TOPPERS50 for ₹149'; }
+$('#coupon').addEventListener('input', updateCouponTotal);
+$('#coupon').addEventListener('change', updateCouponTotal);
 let checkoutRequest = 0;
 function renderCheckout() {
   const existing = $('#purchase-button');

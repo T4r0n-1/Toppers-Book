@@ -9,6 +9,7 @@ let pair, jwk;
 const originalFetch = globalThis.fetch;
 let paymentResponse;
 let pendingOrderResponse;
+let pendingPaymentAttempts = { count: 0, items: [] };
 let gatewayCalls = 0;
 const encode = value => Buffer.from(JSON.stringify(value)).toString('base64url');
 async function token(overrides = {}) { const data = encode({ alg: 'RS256', kid: 'test-key' }) + '.' + encode({ ...claims, ...overrides }); const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', pair.privateKey, new TextEncoder().encode(data)); return data + '.' + Buffer.from(signature).toString('base64url'); }
@@ -19,6 +20,7 @@ before(async () => {
     if (String(url).includes('googleapis.com/service_accounts/')) return Response.json({ keys: [jwk] });
     if (String(url).includes('api.razorpay.com/v1/payments/')) { gatewayCalls++; return Response.json(paymentResponse); }
     if (String(url).endsWith('api.razorpay.com/v1/orders') && options?.method === 'POST') { gatewayCalls++; const order = JSON.parse(options.body); return Response.json({ id: 'order_restricted', ...order }); }
+    if (String(url).endsWith('api.razorpay.com/v1/orders/order_pending/payments')) { gatewayCalls++; return Response.json(pendingPaymentAttempts); }
     if (String(url).endsWith('api.razorpay.com/v1/orders/order_pending')) { gatewayCalls++; return Response.json(pendingOrderResponse); }
     throw new Error('Unexpected external request: ' + url);
   };
@@ -121,5 +123,31 @@ test('retry reopens only the same unpaid order and never creates another charge'
     assert.equal((await context(request('orders', 'POST', body, await token()), env)).status, 409);
     pendingOrderResponse = previous;
   }
+  pendingPaymentAttempts = { count: 1, items: [{ order_id: pending.id, status: 'authorized' }] };
   assert.equal((await context(request('orders', 'POST', { ...body, coupon: '' }, await token()), env)).status, 409);
+});
+
+test('an abandoned unpaid order permits a changed coupon or profile without losing history', async () => {
+  let writes = []; const pending = { id: 'order_pending', amount: 19900, reader_name: 'Old Buyer', phone: '9999999999' };
+  const env = restrictedEnvironment({ DB: { prepare(sql) { return { sql, bind(...args) { this.args = args; return this; }, async first() {
+    if (sql.includes('FROM books')) return { is_ready: 1, page_count: 223 };
+    if (sql.includes('FROM customer_profiles')) return { name: 'Buyer Name', phone: '8384871987' };
+    if (sql.includes('FROM orders')) { assert.match(sql, /ORDER BY created_at DESC, rowid DESC LIMIT 1/); return pending; }
+    return null;
+  }, async run() { writes.push({ sql, args: this.args }); return { success: true }; } }; } } });
+  const body = { bookId: 'cbse10-maths-standard', name: 'Buyer Name', phone: '8384871987', consent: true, coupon: 'Toppers50' };
+  pendingOrderResponse = { id: pending.id, amount: 19900, currency: 'INR', status: 'created', amount_paid: 0, amount_due: 19900 };
+  for (const attempts of [{ count: 0, items: [] }, { count: 1, items: [{ order_id: pending.id, status: 'failed' }] }]) {
+    pendingPaymentAttempts = attempts; writes = [];
+    const response = await context(request('orders', 'POST', body, await token()), env);
+    assert.equal(response.status, 200); assert.equal((await response.json()).amount, 14900);
+    assert.equal(writes.length, 1); assert.match(writes[0].sql, /^INSERT INTO orders/); assert.equal(writes[0].args[3], 14900); assert.equal(writes[0].args[5], 'Buyer Name');
+  }
+  for (const status of ['created', 'authorized', 'captured', 'refunded', 'unknown']) {
+    writes = []; pendingPaymentAttempts = { count: 1, items: [{ order_id: pending.id, status }] };
+    const response = await context(request('orders', 'POST', body, await token()), env);
+    assert.equal(response.status, 409); assert.equal(writes.length, 0);
+  }
+  pendingPaymentAttempts = { count: 1, items: [] };
+  assert.equal((await context(request('orders', 'POST', body, await token()), env)).status, 409);
 });

@@ -5,12 +5,12 @@ import vm from 'node:vm';
 
 const source = readFileSync(new URL('../assets/app.js', import.meta.url), 'utf8');
 const marker = "$('#checkout-form').addEventListener('submit', ";
-const handlerSource = source.slice(source.indexOf(marker) + marker.length, source.indexOf("\n$('#coupon').addEventListener" )).replace(/\);\s*$/, '');
+const handlerSource = source.slice(source.indexOf(marker) + marker.length, source.indexOf('\nfunction updateCouponTotal()')).replace(/\);\s*$/, '');
 function setup({ openThrows = false, verificationFails = false } = {}) {
   const dialog = { open: true, close() { this.open = false; } };
   const nodes = { '#checkout-dialog': dialog, '#checkout-status': {}, '#pay-button': {}, '#buyer-name': { value: 'Buyer Name' }, '#buyer-phone': { value: '8384871987' }, '#coupon': { value: 'TOPPERS50' }, '#purchase-consent': { checked: true } };
   let provider, options, verified = false, library = false, message;
-  const context = { config: { checkoutEnabled: true }, currentUser: { email: 'buyer@example.test' }, $: key => nodes[key],
+  const context = { updateCouponTotal() {}, config: { checkoutEnabled: true }, currentUser: { email: 'buyer@example.test' }, $: key => nodes[key],
     api: async path => { if (path === 'verify') { if (verificationFails) throw new Error('Verification pending'); verified = true; return {}; } return { orderId: 'order_demo', keyId: 'rzp_live_example', amount: 14900 }; },
     window: { Razorpay: function(input) { options = input; provider = this; this.on = () => {}; this.open = () => { assert.equal(dialog.open, false, 'native modal must close before provider opens'); if (openThrows) throw new Error('Could not open payment'); }; } },
     openDialog: () => { dialog.open = true; }, setTimeout: fn => fn(), location: {}, showLibrary: () => { library = true; }, notify: value => { message = value; } };
