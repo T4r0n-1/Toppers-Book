@@ -443,12 +443,15 @@ $('#checkout-form').addEventListener('submit', async event => {
   try {
     const order = await api('orders', { method: 'POST', body: JSON.stringify({ bookId: 'cbse10-maths-standard', name: $('#buyer-name').value.trim(), phone: $('#buyer-phone').value.trim(), coupon: $('#coupon').value.trim(), consent: $('#purchase-consent').checked }) });
     if (!window.Razorpay) await loadScript('https://checkout.razorpay.com/v1/checkout.js');
-    const checkout = new window.Razorpay({ key: order.keyId, order_id: order.orderId, amount: order.amount, currency: 'INR', name: 'GUPTA ENTERPRISES', description: 'Toppers Books · 365-day online access', prefill: { name: $('#buyer-name').value.trim(), email: currentUser.email, contact: $('#buyer-phone').value.trim() }, theme: { color: '#6040b8' }, modal: { ondismiss: () => { button.disabled = false; $('#checkout-status').textContent = 'Checkout closed. If you paid, check My Books before trying again.'; } }, handler: async result => {
+    const checkout = new window.Razorpay({ key: order.keyId, order_id: order.orderId, amount: order.amount, currency: 'INR', name: 'GUPTA ENTERPRISES', description: 'Toppers Books · 365-day online access', prefill: { name: $('#buyer-name').value.trim(), email: currentUser.email, contact: $('#buyer-phone').value.trim() }, theme: { color: '#6040b8' }, modal: { ondismiss: () => { button.disabled = false; $('#checkout-status').textContent = 'Checkout closed. If you paid, check My Books before trying again.'; setTimeout(() => { if (currentUser) openDialog('#checkout-dialog'); }, 0); } }, handler: async result => {
       try { await api('verify', { method: 'POST', body: JSON.stringify(result) }); $('#checkout-dialog').close(); location.hash = 'library'; showLibrary(); notify('Payment verified. Your book is ready in My Books.'); }
-      catch (error) { $('#checkout-status').textContent = error.message; }
+      catch (error) { $('#checkout-status').textContent = error.message; notify(error.message); }
       finally { button.disabled = false; }
-    } }); checkout.on('payment.failed', () => { $('#checkout-status').textContent = 'Payment was not completed. If money was deducted, contact support with the payment reference.'; button.disabled = false; }); checkout.open();
-  } catch (error) { $('#checkout-status').textContent = error.message; button.disabled = false; }
+    } }); checkout.on('payment.failed', () => { $('#checkout-status').textContent = 'Payment was not completed. If money was deducted, contact support with the payment reference.'; button.disabled = false; });
+    // Native modal dialogs sit above provider overlays regardless of z-index.
+    $('#checkout-dialog').close();
+    checkout.open();
+  } catch (error) { $('#checkout-status').textContent = error.message; button.disabled = false; if (currentUser) openDialog('#checkout-dialog'); }
 });
 $('#coupon').addEventListener('input', () => { const code = $('#coupon').value.trim().toUpperCase(); $('#checkout-total').textContent = code === 'TOPPERS50' ? '₹199 − ₹50 = ₹149 · 365-day online access' : code ? 'Coupon will be validated before payment.' : '₹199 · Apply TOPPERS50 for ₹149'; });
 let checkoutRequest = 0;

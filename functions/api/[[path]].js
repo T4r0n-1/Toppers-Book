@@ -121,8 +121,13 @@ async function createOrder(request, env, user) {
   const pricing = priceFor(body.coupon); const now = Math.floor(Date.now() / 1000);
   const existing = await db(env).prepare('SELECT order_id FROM entitlements WHERE uid = ? AND book_id = ? AND revoked = 0 AND expires_at > ?').bind(user.uid, BOOK_ID, now).first();
   if (existing) fail(409, 'You already have access to this book. Open My Books to read it.');
-  const pending = await db(env).prepare("SELECT id FROM orders WHERE uid = ? AND book_id = ? AND status = 'created' AND created_at > ?").bind(user.uid, BOOK_ID, now - 1800).first();
-  if (pending) fail(409, 'A recent order is already pending. Please check My Books or contact support before paying again.');
+  const pending = await db(env).prepare("SELECT * FROM orders WHERE uid = ? AND book_id = ? AND status = 'created' AND created_at > ?").bind(user.uid, BOOK_ID, now - 1800).first();
+  if (pending) {
+    if (pending.amount !== pricing.amount || pending.reader_name !== buyer.name || pending.phone !== buyer.phone) fail(409, 'A recent order has different checkout details. Please contact support before paying again.');
+    const order = await gateway(env, 'orders/' + encodeURIComponent(pending.id));
+    if (order.id !== pending.id || !['created', 'attempted'].includes(order.status) || order.amount !== pending.amount || order.currency !== 'INR' || order.amount_paid !== 0 || order.amount_due !== pending.amount) fail(409, 'Your previous payment may be processing. Check My Books or contact support before paying again.');
+    return json({ orderId: order.id, keyId: env.RAZORPAY_KEY_ID, amount: order.amount, currency: 'INR' });
+  }
   const receipt = 'tb_' + crypto.randomUUID().replace(/-/g, '');
   // Amount and product are authoritative on the server. Client amounts are ignored.
   const order = await gateway(env, 'orders', { method: 'POST', body: JSON.stringify({ amount: pricing.amount, currency: 'INR', receipt, notes: { book_id: BOOK_ID } }) });

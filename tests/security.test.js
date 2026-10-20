@@ -8,6 +8,7 @@ const claims = { aud: 'test-project', iss: 'https://securetoken.google.com/test-
 let pair, jwk;
 const originalFetch = globalThis.fetch;
 let paymentResponse;
+let pendingOrderResponse;
 let gatewayCalls = 0;
 const encode = value => Buffer.from(JSON.stringify(value)).toString('base64url');
 async function token(overrides = {}) { const data = encode({ alg: 'RS256', kid: 'test-key' }) + '.' + encode({ ...claims, ...overrides }); const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', pair.privateKey, new TextEncoder().encode(data)); return data + '.' + Buffer.from(signature).toString('base64url'); }
@@ -18,6 +19,7 @@ before(async () => {
     if (String(url).includes('googleapis.com/service_accounts/')) return Response.json({ keys: [jwk] });
     if (String(url).includes('api.razorpay.com/v1/payments/')) { gatewayCalls++; return Response.json(paymentResponse); }
     if (String(url).endsWith('api.razorpay.com/v1/orders') && options?.method === 'POST') { gatewayCalls++; const order = JSON.parse(options.body); return Response.json({ id: 'order_restricted', ...order }); }
+    if (String(url).endsWith('api.razorpay.com/v1/orders/order_pending')) { gatewayCalls++; return Response.json(pendingOrderResponse); }
     throw new Error('Unexpected external request: ' + url);
   };
 });
@@ -100,4 +102,24 @@ test('restricted checkout still requires the complete book to be ready', async (
   const result = await (await context(request('config', 'GET', undefined, await token()), env)).json();
   assert.equal(result.checkoutEnabled, false);
   assert.equal((await context(request('orders', 'POST', {}, await token()), env)).status, 409);
+});
+
+test('retry reopens only the same unpaid order and never creates another charge', async () => {
+  const pending = { id: 'order_pending', amount: 14900, reader_name: 'Buyer Name', phone: '8384871987' };
+  const env = restrictedEnvironment({ DB: { prepare(sql) { return { bind() { return this; }, async first() {
+    if (sql.includes('FROM books')) return { is_ready: 1, page_count: 223 };
+    if (sql.includes('FROM customer_profiles')) return { name: 'Buyer Name', phone: '8384871987' };
+    if (sql.includes('FROM orders')) return pending;
+    return null;
+  }, async run() { throw new Error('Retry must not insert a new order'); } }; } } });
+  const body = { bookId: 'cbse10-maths-standard', name: 'Buyer Name', phone: '8384871987', consent: true, coupon: 'TOPPERS50' };
+  pendingOrderResponse = { id: pending.id, amount: 14900, currency: 'INR', status: 'attempted', amount_paid: 0, amount_due: 14900 };
+  const response = await context(request('orders', 'POST', body, await token()), env);
+  assert.equal(response.status, 200); assert.equal((await response.json()).orderId, pending.id);
+  for (const change of [{ status: 'paid', amount_paid: 14900, amount_due: 0 }, { currency: 'USD' }, { amount: 1 }, { id: 'order_other' }]) {
+    const previous = pendingOrderResponse; pendingOrderResponse = { ...previous, ...change };
+    assert.equal((await context(request('orders', 'POST', body, await token()), env)).status, 409);
+    pendingOrderResponse = previous;
+  }
+  assert.equal((await context(request('orders', 'POST', { ...body, coupon: '' }, await token()), env)).status, 409);
 });
