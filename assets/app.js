@@ -48,7 +48,7 @@ document.addEventListener('click', async event => {
   if (action === 'login') { if (currentUser?.emailVerified) location.hash = 'library'; else openDialog('#login-dialog'); }
   if (action === 'library') location.hash = 'library';
   if (action === 'home') location.hash = 'home';
-  if (action === 'preview') startReader();
+  if (action === 'preview') startReader(null, Number(event.target.closest('[data-start-page]')?.dataset.startPage) || null);
   if (action === 'logout' && auth) { await authSDK.signOut(auth); signupDraft = null; if ($('#profile-dialog').open) $('#profile-dialog').close(); notify('You have signed out.'); }
   if (action === 'profile') await openProfile();
   if (action === 'checkout') {
@@ -143,11 +143,15 @@ function setContents(open) {
   $('#toggle-contents').setAttribute('aria-expanded', String(open));
   requestAnimationFrame(applyZoom);
 }
-function startReader(book = null) {
+function startReader(book = null, startBookPage = null) {
   activeBook = book; zoom = 1; modeChosen = false;
   readerMode = book && matchMedia('(min-width: 900px)').matches ? 'spread' : 'single';
   $('#reader-view').value = readerMode; $('#reader-view').disabled = !book;
   page = Math.max(0, Number(safeStorage('get', resumeKey())) || 0);
+  if (!book && startBookPage !== null) {
+    const start = samples.findIndex(sample => sample.page === startBookPage);
+    if (start >= 0) page = start;
+  }
   $('#reader-title').textContent = book ? book.title : 'Chapter 1: Real Numbers · FREE';
   $('#reader-kicker').textContent = book ? 'YOUR PERSONALISED READING COPY' : 'FREE CHAPTER 1 + EXAM STRATEGY · 11 PAGES';
   $('#reader-disclaimer').textContent = book ? 'Personalised online reading. Scroll here for all chapters. Use Next to turn the book.' : 'Contents (p. 5), time-management and answer-writing tips (p. 10–11), and complete Chapter 1 (p. 14–21). Full book: 223 pages.';
