@@ -43,3 +43,10 @@ CREATE TABLE IF NOT EXISTS entitlements (
 CREATE INDEX IF NOT EXISTS entitlements_owner ON entitlements(uid,book_id,revoked,expires_at);
 CREATE INDEX IF NOT EXISTS orders_owner ON orders(uid,book_id,status,created_at);
 INSERT OR IGNORE INTO books (id,title) VALUES ('cbse10-maths-standard','CBSE Class 10 Mathematics Standard (041)');
+
+CREATE TABLE IF NOT EXISTS practice_email_preferences (
+  uid TEXT PRIMARY KEY,
+  email TEXT NOT NULL,
+  enabled INTEGER NOT NULL DEFAULT 0 CHECK (enabled IN (0,1)),
+  updated_at INTEGER NOT NULL
+);

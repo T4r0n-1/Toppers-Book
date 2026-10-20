@@ -235,3 +235,8 @@ real money (Rs.199 or Rs.149 with TOPPERS50), with an explicit confirmation.
 No payment or access is simulated. Remove `TEST_CHECKOUT_EMAIL` and redeploy
 after testing. Never replace the production credentials with test keys.
 Use a verified account without an active entitlement; do not delete real purchases.
+
+## Practice email preferences
+New signup and first-profile forms preselect the optional practice-paper email checkbox. Users can untick it and edit their saved preference later. Existing profiles remain off unless explicitly changed. The signed-in profile API saves the preference by signed UID and email in `practice_email_preferences`, created idempotently for existing D1 installations; `schema.sql` and migration 0002 also include it. Older clients omitting the preference preserve its saved value.
+
+This release collects preferences only: no email provider, send endpoint, scheduled sender, or automatic billing is configured. The UI labels alerts as coming soon. Before delivery launches, configure a verified sender, verified-recipient checks, unsubscribe links, one delivery per recipient/paper, and a quota-bound queue.

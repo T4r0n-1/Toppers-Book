@@ -11,7 +11,7 @@ const support = '<a href="mailto:codetoppers@gmail.com">codetoppers@gmail.com</a
 const operator = '<p><strong>Toppers Books is operated by GUPTA ENTERPRISES.</strong><br>Tajganj, Agra, Uttar Pradesh – 282001, India.<br>' + support + '</p>';
 const policies = {
   terms: { title: 'Terms & conditions', body: `${operator}<h3>Our digital books</h3><p>Toppers Books offers independent educational resources. We are not affiliated with or endorsed by CBSE. The complete 223-page Mathematics edition is available for purchase with personal online reading access.</p><h3>Purchase and personal access</h3><p>The book page states the contents, price and access period. A purchase provides a personal, non-transferable licence to read the purchased book online for 365 days from verified payment. It does not transfer copyright or provide a downloadable PDF. Access does not automatically renew.</p><h3>Your account and watermark</h3><p>Use accurate account and checkout details. Purchased reading pages are personalised with the reader name and mobile number provided at checkout. Do not share your account, copy, resell, publish or redistribute book content. Access may be restricted for misuse; contact support if you believe a restriction is incorrect.</p><h3>Availability and support</h3><p>An internet connection and a supported modern browser are required. Temporary interruptions can occur. Contact us about access problems, content errors or corrections. Educational resources support study and do not guarantee any exam result.</p><h3>Payments and policies</h3><p>Payments are processed through Razorpay. Coupon eligibility and the final total will be displayed before payment. Our Privacy, Digital Access, and Refunds & Cancellations policies also apply. Nothing in these terms excludes applicable statutory rights.</p>` },
-  privacy: { title: 'Privacy policy', body: `${operator}<h3>Information we use</h3><p>When you create an account or make a purchase, we use your sign-in email and identifier, reader name, mobile number, purchase and payment references, and access expiry to provide your account and purchased books. Google sign-in may also provide your profile name and picture. We use browser storage to keep sign-in state and your reading position.</p><h3>Personalised reading pages</h3><p>Your name and mobile number will appear in a watermark on your purchased reading pages to discourage redistribution. This will be disclosed before payment. Sharing a screenshot can reveal these details, so keep your reading pages private.</p><h3>Service providers</h3><p>We use Cloudflare for hosting and protected content. Firebase Authentication handles Google and email/password sign-in. Passwords are handled by Firebase; we do not store them in our own database. Razorpay processes payments. These providers process information under their own policies. We do not store card numbers, CVV or UPI PINs.</p><h3>Retention and your requests</h3><p>We retain account and purchase information as needed to provide access, resolve issues and meet applicable record-keeping requirements. Contact us to request correction or deletion. Some transaction records may need to be retained even after account deletion. We do not sell your personal information.</p><h3>Students and parents</h3><p>If you are under 18, ask a parent or guardian to manage the purchase and provide appropriate account and contact details.</p><h3>Contact</h3><p>For privacy questions or requests, email codetoppers@gmail.com.</p>` },
+  privacy: { title: 'Privacy policy', body: `${operator}<h3>Information we use</h3><p>When you create an account or make a purchase, we use your sign-in email and identifier, reader name, mobile number, purchase and payment references, and access expiry to provide your account and purchased books. Google sign-in may also provide your profile name and picture. We use browser storage to keep sign-in state and your reading position.</p><h3>Personalised reading pages</h3><p>Your name and mobile number will appear in a watermark on your purchased reading pages to discourage redistribution. This will be disclosed before payment. Sharing a screenshot can reveal these details, so keep your reading pages private.</p><h3>Service providers</h3><p>We use Cloudflare for hosting and protected content. Firebase Authentication handles Google and email/password sign-in. Passwords are handled by Firebase; we do not store them in our own database. Razorpay processes payments. These providers process information under their own policies. We do not store card numbers, CVV or UPI PINs.</p><h3>Practice paper emails</h3><p>New-account forms preselect optional email alerts for new practice papers. You can untick this before saving or change it later in Edit profile. We store your choice and its update time with your account. Email alerts are coming soon; saving this preference does not send an email. When delivery launches, alerts will use your account email and include an unsubscribe option.</p><h3>Retention and your requests</h3><p>We retain account and purchase information as needed to provide access, resolve issues and meet applicable record-keeping requirements. Contact us to request correction or deletion. Some transaction records may need to be retained even after account deletion. We do not sell your personal information.</p><h3>Students and parents</h3><p>If you are under 18, ask a parent or guardian to manage the purchase and provide appropriate account and contact details.</p><h3>Contact</h3><p>For privacy questions or requests, email codetoppers@gmail.com.</p>` },
   refunds: { title: 'Refunds & cancellations', body: `${operator}<h3>Current launch status</h3><p>The complete 223-page edition is available with 365-day online reading access after verified successful payment.</p><h3>Before you purchase</h3><p>Please check the book description, sample, online-only format and 365-day access period before paying. If you experience a duplicate payment, a payment without book access, a wrong product delivery or a material mismatch with the description, contact us with the order ID and issue details.</p><h3>Review and resolution</h3><p>We will review the transaction and work to restore the correct access or provide an appropriate refund. Requests based only on a change of mind after access has been provided will be reviewed individually. This policy does not limit rights available under applicable law.</p><h3>Cancellations and refunds</h3><p>Unpaid orders can be abandoned without a charge. For a paid order, contact support to request cancellation or a refund. Approved refunds are returned through the original payment method; bank and payment-provider processing times apply. Access associated with a fully refunded purchase will end.</p><h3>How to contact us</h3><p>Email codetoppers@gmail.com or WhatsApp +91 83848 71987. Never send your card details, CVV, UPI PIN or OTP.</p>` },
   delivery: { title: 'Digital access policy', body: `${operator}<h3>No physical delivery</h3><p>This is an online reading product. No printed book is shipped and no PDF download, print or offline access is included.</p><h3>When access begins</h3><p>Access is granted to the signed-in buyer only after the backend verifies a captured payment. Closing a checkout window or seeing a payment screenshot does not by itself establish a purchase.</p><h3>Your reading period</h3><p>Purchased access lasts 365 days from verified successful payment. The expiry date will be shown in My Books. Sign in with the same account used for purchase. There is no automatic renewal.</p><h3>Personalisation and devices</h3><p>Reading pages carry the reader name and mobile number provided at checkout. Use a modern browser on your phone, tablet or computer and maintain an internet connection. Access is for the purchasing account only.</p><h3>If a payment is pending or access is missing</h3><p>Check My Books after signing in. If payment was deducted but the book remains unavailable, contact support with your order/payment reference. Avoid repeatedly paying for the same book while an earlier payment is being checked.</p>` }
 };
@@ -272,6 +272,7 @@ async function openProfile() {
   $('#profile-name').value = currentProfile?.name || draft?.name || currentUser.displayName || '';
   $('#profile-phone').value = currentProfile?.phone || draft?.phone || '';
   $('#profile-consent').checked = false;
+  $('#profile-alerts').checked = currentProfile ? currentProfile.practiceAlerts === true : draft?.practiceAlerts ?? true;
   $('#profile-title').textContent = currentProfile ? 'Your profile.' : 'Complete your profile.';
   $('#profile-status').textContent = config.profileEnabled ? 'These details will be saved privately to your account. Changes apply to future purchases.' : 'Profile saving will be available shortly. You can already use your account to sign in.';
   $('#save-profile').disabled = !config.profileEnabled;
@@ -282,10 +283,11 @@ $('#profile-form').addEventListener('submit', async event => {
   $('#save-profile').disabled = true;
   try {
     const details = profileInput($('#profile-name').value, $('#profile-phone').value);
+    details.practiceAlerts = $('#profile-alerts').checked;
     await saveProfileDetails(details);
     // Display name is a convenience; the private profile remains authoritative.
     try { await authSDK.updateProfile(currentUser, { displayName: details.name }); } catch { /* A retry is not needed for a saved private profile. */ }
-    $('#profile-dialog').close(); notify('Your name and mobile number have been saved.');
+    $('#profile-dialog').close(); notify('Your profile and practice-alert preference have been saved.');
     if (location.hash === '#library') showLibrary();
   } catch (error) { $('#profile-status').textContent = error.message || 'Your profile could not be saved. Please try again.'; }
   finally { $('#save-profile').disabled = !config.profileEnabled; }
@@ -339,7 +341,7 @@ function setAuthBusy(busy) {
   authBusy = busy;
   ['google-login', 'login-email', 'login-password', 'email-login', 'forgot-password', 'show-password'].forEach(id => { $('#' + id).disabled = busy || !auth; });
   $$('[data-auth-mode]').forEach(button => { button.disabled = busy || !auth; });
-  ['signup-name', 'signup-phone', 'signup-consent'].forEach(id => { $('#' + id).disabled = busy || !auth || loginMode !== 'signup'; });
+  ['signup-name', 'signup-phone', 'signup-consent', 'signup-alerts'].forEach(id => { $('#' + id).disabled = busy || !auth || loginMode !== 'signup'; });
 }
 function renderAuthState() {
   const unverified = !!currentUser && !currentUser.emailVerified;
@@ -359,6 +361,8 @@ function setLoginMode(mode) {
   const signup = mode === 'signup';
   $('#signup-details').hidden = !signup;
   $('#signup-consent-label').hidden = !signup;
+  $('#signup-alerts-label').hidden = !signup;
+  $('#signup-alerts').disabled = !signup || !auth;
   ['signup-name', 'signup-phone', 'signup-consent'].forEach(id => { $('#' + id).required = signup; $('#' + id).disabled = !signup || !auth; });
   $('#login-password').value = '';
   $('#login-password').type = 'password';
@@ -395,7 +399,7 @@ $('#email-login-form').addEventListener('submit', async event => {
   const email = $('#login-email').value.trim();
   if (loginMode === 'signup') {
     if (!config.profileEnabled) { $('#login-status').textContent = 'Account registration is being prepared. Please try again shortly. Existing users can sign in.'; return; }
-    try { signupDraft = { ...profileInput($('#signup-name').value, $('#signup-phone').value), email }; }
+    try { signupDraft = { ...profileInput($('#signup-name').value, $('#signup-phone').value), email, practiceAlerts: $('#signup-alerts').checked }; }
     catch (error) { $('#login-status').textContent = error.message; return; }
   }
   setAuthBusy(true);
@@ -406,7 +410,7 @@ $('#email-login-form').addEventListener('submit', async event => {
     currentUser = result.user;
     let profileError = null;
     if (loginMode === 'signup' && signupDraft?.email === email) {
-      try { const details = { name: signupDraft.name, phone: signupDraft.phone }; await saveProfileDetails(details); try { await authSDK.updateProfile(currentUser, { displayName: details.name }); } catch { /* Private profile is saved. */ } }
+      try { const details = { name: signupDraft.name, phone: signupDraft.phone, practiceAlerts: signupDraft.practiceAlerts }; await saveProfileDetails(details); try { await authSDK.updateProfile(currentUser, { displayName: details.name }); } catch { /* Private profile is saved. */ } }
       catch (error) { profileError = error.message; }
     }
     renderAuthState();

@@ -43,14 +43,52 @@ test('watermark embeds escaped identity and never interprets buyer input as mark
 test('order ownership is checked before a gateway confirmation', async () => { const initialCalls = gatewayCalls; const env = { FIREBASE_PROJECT_ID: 'test-project', DB: { prepare() { return { bind(id, uid) { assert.equal(uid, 'buyer-a'); return this; }, async first() { return null; } }; } } }; const response = await context(request('verify', 'POST', { razorpay_order_id: 'order_other', razorpay_payment_id: 'pay_other', razorpay_signature: 'a'.repeat(64) }, await token()), env); assert.equal(response.status, 404); assert.equal(gatewayCalls, initialCalls); });
 test('captured payment retries use an idempotent entitlement write', async () => { const batches = []; const order = { id: 'order_demo', uid: 'buyer-a', book_id: 'cbse10-maths-standard', amount: 14900, reader_name: 'Buyer', phone: '8384871987', status: 'paid', paid_at: now - 300 }; const env = { FIREBASE_PROJECT_ID: 'test-project', RAZORPAY_KEY_ID: 'rzp_live_example', RAZORPAY_KEY_SECRET: 'secret', DB: { prepare(sql) { return { sql, bind(...args) { this.args = args; return this; }, async first() { return order; } }; }, async batch(statements) { batches.push(statements); } } }; paymentResponse = { id: 'pay_demo', order_id: order.id, status: 'captured', captured: true, amount: 14900, currency: 'INR', amount_refunded: 0, created_at: now - 300 }; const signature = createHmac('sha256', 'secret').update('order_demo|pay_demo').digest('hex'); const body = { razorpay_order_id: order.id, razorpay_payment_id: 'pay_demo', razorpay_signature: signature }; for (let i = 0; i < 2; i++) assert.equal((await context(request('verify', 'POST', body, await token()), env)).status, 200); assert.equal(batches.length, 2); for (const statements of batches) { assert.equal(statements[0].args[1], now - 300); assert.match(statements[1].sql, /ON CONFLICT\(order_id\) DO NOTHING/); assert.match(statements[1].sql, /status = 'paid'/); } });
 
+function profileDatabase() {
+  const profiles = new Map(), preferences = new Map();
+  return { profiles, preferences, prepare(sql) { return {
+    bind(...args) { this.args = args; return this; },
+    async run() {
+      if (sql.startsWith('CREATE TABLE IF NOT EXISTS practice_email_preferences')) return;
+      if (sql.startsWith('INSERT INTO customer_profiles')) { profiles.set(this.args[0], this.args); return; }
+      if (sql.startsWith('INSERT INTO practice_email_preferences')) { preferences.set(this.args[0], this.args); return; }
+      throw new Error('Unexpected write: ' + sql);
+    },
+    async first() {
+      if (sql.includes('FROM customer_profiles')) { const saved = profiles.get(this.args[0]); return saved ? { name: saved[2], phone: saved[3], phone_verified: 0 } : null; }
+      if (sql.includes('FROM practice_email_preferences')) { const saved = preferences.get(this.args[0]); return saved ? { enabled: saved[2] } : null; }
+      throw new Error('Unexpected read: ' + sql);
+    }
+  }; } };
+}
 test('profile persistence uses the signed UID/email and never caller-supplied identity', async () => {
-  let saved;
-  const env = { FIREBASE_PROJECT_ID: 'test-project', DB: { prepare() { return { bind(...args) { this.args = args; return this; }, async run() { saved = this.args; }, async first() { assert.equal(this.args[0], 'buyer-a'); return saved ? { name: saved[2], phone: saved[3], phone_verified: 0 } : null; } }; } } };
+  const env = { FIREBASE_PROJECT_ID: 'test-project', DB: profileDatabase() };
   const response = await context(request('profile', 'POST', { uid: 'victim', email: 'victim@example.test', name: 'Buyer Name', phone: '+91 83848 71987', consent: true, phoneVerified: true }, await token({ email_verified: false })), env);
+  const saved = env.DB.profiles.get('buyer-a');
   assert.equal(response.status, 200); assert.equal(saved[0], 'buyer-a'); assert.equal(saved[1], 'buyer@example.test');
-  const returned = await response.json(); assert.equal(returned.profile.phoneVerified, false);
+  const returned = await response.json(); assert.equal(returned.profile.phoneVerified, false); assert.equal(returned.profile.practiceAlerts, false);
   const read = await context(request('profile?uid=victim', 'GET', undefined, await token()), env);
   assert.equal(read.status, 200); assert.equal((await read.json()).profile.name, 'Buyer Name');
+});
+
+test('practice alerts persist opt-in and opt-out, preserve omitted preferences and isolate accounts', async () => {
+  const env = { FIREBASE_PROJECT_ID: 'test-project', DB: profileDatabase() };
+  const body = { name: 'Buyer Name', phone: '8384871987', consent: true, uid: 'victim', email: 'victim@example.test' };
+  const authToken = await token();
+  for (const enabled of [true, false]) {
+    const save = await context(request('profile', 'POST', { ...body, practiceAlerts: enabled }, authToken), env);
+    assert.equal(save.status, 200); assert.equal((await save.json()).profile.practiceAlerts, enabled);
+    const read = await context(request('profile', 'GET', undefined, authToken), env);
+    assert.equal((await read.json()).profile.practiceAlerts, enabled);
+    const legacy = await context(request('profile', 'POST', body, authToken), env);
+    assert.equal((await legacy.json()).profile.practiceAlerts, enabled);
+    const saved = env.DB.preferences.get('buyer-a');
+    assert.equal(saved[1], 'buyer@example.test'); assert.equal(saved[2], Number(enabled)); assert.ok(saved[3] > 0);
+    assert.equal(env.DB.preferences.has('victim'), false);
+  }
+  const other = await context(request('profile', 'GET', undefined, await token({ sub: 'buyer-b' })), env);
+  assert.equal((await other.json()).profile, null);
+  const invalid = await context(request('profile', 'POST', { ...body, practiceAlerts: 'true' }, authToken), env);
+  assert.equal(invalid.status, 400);
 });
 
 test('profile-only access for an unverified account cannot read the library or books', async () => {

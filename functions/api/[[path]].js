@@ -94,20 +94,33 @@ async function publicConfig(env, request) {
   }
   return json({ authEnabled, profileEnabled: !!env.DB, salesOpen, checkoutEnabled, liveTest: checkoutEnabled && !salesOpen, firebase: authEnabled ? firebase : null });
 }
+// Lazy creation keeps existing D1 installations compatible without a dashboard migration.
+async function practicePreference(env, user, enabled) {
+  const store = db(env);
+  await store.prepare('CREATE TABLE IF NOT EXISTS practice_email_preferences (\n  uid TEXT PRIMARY KEY,\n  email TEXT NOT NULL,\n  enabled INTEGER NOT NULL DEFAULT 0 CHECK (enabled IN (0,1)),\n  updated_at INTEGER NOT NULL\n);').run();
+  if (typeof enabled === 'boolean') {
+    await store.prepare('INSERT INTO practice_email_preferences (uid, email, enabled, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(uid) DO UPDATE SET email = excluded.email, enabled = excluded.enabled, updated_at = excluded.updated_at').bind(user.uid, user.email, enabled ? 1 : 0, Math.floor(Date.now() / 1000)).run();
+    return enabled;
+  }
+  const saved = await store.prepare('SELECT enabled FROM practice_email_preferences WHERE uid = ?').bind(user.uid).first();
+  return saved?.enabled === 1;
+}
 async function profile(request, env, user) {
   if (!env.DB) fail(503, 'Profile saving is temporarily unavailable. Please try again shortly.');
   if (request.method === 'GET') {
     const saved = await db(env).prepare('SELECT name, phone, phone_verified FROM customer_profiles WHERE uid = ?').bind(user.uid).first();
-    return json({ profile: saved ? { name: saved.name, phone: saved.phone, email: user.email, phoneVerified: saved.phone_verified === 1 } : null });
+    return json({ profile: saved ? { name: saved.name, phone: saved.phone, email: user.email, phoneVerified: saved.phone_verified === 1, practiceAlerts: await practicePreference(env, user) } : null });
   }
   const body = await bodyJson(request);
   const details = profileDetails(body);
+  if (body.practiceAlerts !== undefined && typeof body.practiceAlerts !== 'boolean') fail(400, 'Practice alerts must be on or off.');
   if (body.consent !== true) fail(400, 'Accept the Terms and Privacy Policy to save your profile.');
   const now = Math.floor(Date.now() / 1000);
   // uid/email always come from the signed Firebase token, never from form fields.
   // A number entered by the user is not an SMS-verified phone identity.
   await db(env).prepare('INSERT INTO customer_profiles (uid, email, name, phone, phone_verified, created_at, updated_at, consent_at) VALUES (?, ?, ?, ?, 0, ?, ?, ?) ON CONFLICT(uid) DO UPDATE SET email = excluded.email, name = excluded.name, phone = excluded.phone, phone_verified = CASE WHEN customer_profiles.phone = excluded.phone THEN customer_profiles.phone_verified ELSE 0 END, updated_at = excluded.updated_at, consent_at = excluded.consent_at').bind(user.uid, user.email, details.name, details.phone, now, now, now).run();
-  return json({ saved: true, profile: { ...details, email: user.email, phoneVerified: false } });
+  const practiceAlerts = await practicePreference(env, user, body.practiceAlerts);
+  return json({ saved: true, profile: { ...details, email: user.email, phoneVerified: false, practiceAlerts } });
 }
 async function createOrder(request, env, user) {
   if (!checkoutAllowed(env, user)) fail(409, 'The complete book is still in preparation. Purchases are not open yet.');
