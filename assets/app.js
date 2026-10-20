@@ -437,7 +437,8 @@ $('#check-verification').addEventListener('click', async () => {
 });
 function loadScript(src) { return new Promise((resolve, reject) => { const script = document.createElement('script'); script.src = src; script.onload = resolve; script.onerror = reject; document.head.append(script); }); }
 $('#checkout-form').addEventListener('submit', async event => {
-  event.preventDefault(); if (!config.salesOpen || !currentUser) { $('#checkout-status').textContent = 'Purchases are not open yet.'; return; }
+  event.preventDefault(); if (!config.checkoutEnabled || !currentUser) { $('#checkout-status').textContent = 'Purchases are not open yet.'; return; }
+  if (config.liveTest && !window.confirm('This is a LIVE payment test. Real money will be charged: ₹199, or ₹149 with TOPPERS50. Continue?')) return;
   const button = $('#pay-button'); button.disabled = true; $('#checkout-status').textContent = 'Preparing your order…';
   try {
     const order = await api('orders', { method: 'POST', body: JSON.stringify({ bookId: 'cbse10-maths-standard', name: $('#buyer-name').value.trim(), phone: $('#buyer-phone').value.trim(), coupon: $('#coupon').value.trim(), consent: $('#purchase-consent').checked }) });
@@ -450,6 +451,25 @@ $('#checkout-form').addEventListener('submit', async event => {
   } catch (error) { $('#checkout-status').textContent = error.message; button.disabled = false; }
 });
 $('#coupon').addEventListener('input', () => { const code = $('#coupon').value.trim().toUpperCase(); $('#checkout-total').textContent = code === 'TOPPERS50' ? '₹199 − ₹50 = ₹149 · 365-day online access' : code ? 'Coupon will be validated before payment.' : '₹199 · Apply TOPPERS50 for ₹149'; });
+let checkoutRequest = 0;
+function renderCheckout() {
+  const existing = $('#purchase-button');
+  if (!config.checkoutEnabled) { existing?.remove(); return; }
+  if (!existing) {
+    const buy = document.createElement('button'); buy.id = 'purchase-button'; buy.className = 'button button-outline'; buy.dataset.action = 'checkout'; $('.product-actions').append(buy);
+  }
+  $('#purchase-button').textContent = config.liveTest ? 'Test live payment →' : 'Buy online access →';
+}
+async function refreshCheckout(user) {
+  const attempt = ++checkoutRequest;
+  config.checkoutEnabled = config.salesOpen; config.liveTest = false; renderCheckout();
+  if (!user || !user.emailVerified) return;
+  try {
+    const updated = await api('config');
+    if (attempt !== checkoutRequest || currentUser?.uid !== user.uid) return;
+    config = updated; renderCheckout();
+  } catch { /* Restricted checkout stays closed if verification fails. */ }
+}
 async function initialise() {
   try { config = await api('config'); } catch { $('#login-status').textContent = 'Sign-in could not be loaded. Please refresh or contact support.'; return; }
   if (config.authEnabled && config.firebase) {
@@ -462,6 +482,7 @@ async function initialise() {
       sdk.onAuthStateChanged(auth, user => {
         const previousUid = currentUser?.uid;
         currentUser = user;
+        refreshCheckout(user);
         $('#account-button').textContent = user ? 'My account ↗' : 'Sign in ↗';
         if (previousUid !== user?.uid) { if (activeBook && $('#reader-dialog').open) $('#reader-dialog').close(); verificationSentAt = 0; ++profileRequest; currentProfile = null; profileOwner = null; }
         renderAuthState();
@@ -472,10 +493,6 @@ async function initialise() {
       if (location.hash === '#library') showLibrary();
     } catch { $('#login-status').textContent = 'Sign-in is temporarily unavailable. Please try again later.'; }
   }
-  if (config.salesOpen) {
-    // A private product readiness flag on the server is also required to create any order.
-    $$('.coming-note').forEach(element => { element.textContent = '365-day online access'; });
-    const buy = document.createElement('button'); buy.className = 'button button-outline'; buy.dataset.action = 'checkout'; buy.textContent = 'Buy online access →'; $('.product-actions').append(buy);
-  }
+  renderCheckout();
 }
 initialise();

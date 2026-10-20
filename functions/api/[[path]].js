@@ -75,14 +75,24 @@ async function gateway(env, path, options = {}) {
   if (!response.ok) fail(502, 'The payment service could not confirm this request. Please contact support before paying again.');
   return response.json();
 }
-function salesEnabled(env) { const firebase = firebaseSettings(env); return env.AUTH_DISABLED !== 'true' && env.SALES_OPEN === 'true' && !!env.DB && !!env.BOOKS && !!firebase.projectId && !!firebase.apiKey && !!firebase.authDomain && /^rzp_live_/.test(env.RAZORPAY_KEY_ID || '') && !!env.RAZORPAY_KEY_SECRET && !!env.RAZORPAY_WEBHOOK_SECRET; }
+function paymentConfigured(env) { const firebase = firebaseSettings(env); return env.AUTH_DISABLED !== 'true' && !!env.DB && !!env.BOOKS && !!firebase.projectId && !!firebase.apiKey && !!firebase.authDomain && /^rzp_live_/.test(env.RAZORPAY_KEY_ID || '') && !!env.RAZORPAY_KEY_SECRET && !!env.RAZORPAY_WEBHOOK_SECRET; }
+function salesEnabled(env) { return env.SALES_OPEN === 'true' && paymentConfigured(env); }
+export function checkoutAllowed(env, user) {
+  const tester = typeof env.TEST_CHECKOUT_EMAIL === 'string' ? env.TEST_CHECKOUT_EMAIL.trim().toLowerCase() : '';
+  return paymentConfigured(env) && (env.SALES_OPEN === 'true' || (!!tester && !!user && user.email.toLowerCase() === tester));
+}
 async function bookRecord(env) { return db(env).prepare('SELECT * FROM books WHERE id = ?').bind(BOOK_ID).first(); }
-async function publicConfig(env) {
+async function publicConfig(env, request) {
   const firebase = firebaseSettings(env);
   const authEnabled = env.AUTH_DISABLED !== 'true' && !!(firebase.apiKey && firebase.projectId && firebase.authDomain);
   let salesOpen = false;
   if (salesEnabled(env)) { const book = await bookRecord(env); salesOpen = book?.is_ready === 1 && book.page_count > 0; }
-  return json({ authEnabled, profileEnabled: !!env.DB, salesOpen, firebase: authEnabled ? firebase : null });
+  let checkoutEnabled = salesOpen;
+  if (!salesOpen && request.headers.has('Authorization')) {
+    const user = await authenticate(request, env);
+    if (checkoutAllowed(env, user)) { const book = await bookRecord(env); checkoutEnabled = book?.is_ready === 1 && book.page_count > 0; }
+  }
+  return json({ authEnabled, profileEnabled: !!env.DB, salesOpen, checkoutEnabled, liveTest: checkoutEnabled && !salesOpen, firebase: authEnabled ? firebase : null });
 }
 async function profile(request, env, user) {
   if (!env.DB) fail(503, 'Profile saving is temporarily unavailable. Please try again shortly.');
@@ -100,7 +110,7 @@ async function profile(request, env, user) {
   return json({ saved: true, profile: { ...details, email: user.email, phoneVerified: false } });
 }
 async function createOrder(request, env, user) {
-  if (!salesEnabled(env)) fail(409, 'The complete book is still in preparation. Purchases are not open yet.');
+  if (!checkoutAllowed(env, user)) fail(409, 'The complete book is still in preparation. Purchases are not open yet.');
   const book = await bookRecord(env); if (!book || book.is_ready !== 1 || book.page_count < 1) fail(409, 'The complete book is not available for purchase yet.');
   const body = await bodyJson(request); if (body.bookId !== BOOK_ID) fail(400, 'Unknown book.');
   const submittedBuyer = buyerDetails(body);
@@ -204,7 +214,7 @@ export async function onRequest({ request, env }) {
   try {
     const path = new URL(request.url).pathname.replace(/^\/api\/?/, '').split('/').filter(Boolean);
     const route = path[0]; const method = request.method;
-    if (route === 'config' && path.length === 1 && method === 'GET') return await publicConfig(env);
+    if (route === 'config' && path.length === 1 && method === 'GET') return await publicConfig(env, request);
     if (route === 'webhook' && path.length === 1 && method === 'POST') return await webhook(request, env);
     if (!['orders', 'verify', 'library', 'read', 'profile'].includes(route)) fail(404, 'Endpoint not found.');
     if ((['orders', 'verify'].includes(route) && method !== 'POST') || (['library', 'read'].includes(route) && method !== 'GET')) fail(405, 'Method not allowed.');

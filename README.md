@@ -223,3 +223,15 @@ after resuming. One draft/result is kept in localStorage when available; it is n
 saved to the customer account or synced. This client-side practice bank is not a
 secure examination service. Notebook-photo analysis is not connected in this
 release: it needs a separately configured AI backend and private image handling.
+
+## Restricted live checkout verification
+
+Keep `SALES_OPEN=false`. Set encrypted `TEST_CHECKOUT_EMAIL` to exactly one
+verified testing account and redeploy. Only that authenticated account sees
+“Test live payment” and can create live orders while public sales remain closed.
+All normal profile, readiness, price, payment signature, captured-payment and
+existing-access checks still apply. This uses real live credentials and charges
+real money (Rs.199 or Rs.149 with TOPPERS50), with an explicit confirmation.
+No payment or access is simulated. Remove `TEST_CHECKOUT_EMAIL` and redeploy
+after testing. Never replace the production credentials with test keys.
+Use a verified account without an active entitlement; do not delete real purchases.

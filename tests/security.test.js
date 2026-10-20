@@ -14,9 +14,10 @@ async function token(overrides = {}) { const data = encode({ alg: 'RS256', kid: 
 before(async () => {
   pair = await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['sign', 'verify']);
   jwk = { ...await crypto.subtle.exportKey('jwk', pair.publicKey), kid: 'test-key' };
-  globalThis.fetch = async url => {
+  globalThis.fetch = async (url, options) => {
     if (String(url).includes('googleapis.com/service_accounts/')) return Response.json({ keys: [jwk] });
     if (String(url).includes('api.razorpay.com/v1/payments/')) { gatewayCalls++; return Response.json(paymentResponse); }
+    if (String(url).endsWith('api.razorpay.com/v1/orders') && options?.method === 'POST') { gatewayCalls++; const order = JSON.parse(options.body); return Response.json({ id: 'order_restricted', ...order }); }
     throw new Error('Unexpected external request: ' + url);
   };
 });
@@ -61,4 +62,42 @@ test('profile save fails honestly without storage and rejects missing consent', 
   const env = { FIREBASE_PROJECT_ID: 'test-project', DB: {} };
   assert.equal((await context(request('profile', 'POST', { ...body, consent: false }, authToken), env)).status, 400);
   assert.throws(() => profileDetails({ name: '<img>', phone: '8384871987' }));
+});
+
+function restrictedEnvironment(overrides = {}) {
+  return { FIREBASE_PROJECT_ID: 'test-project', SALES_OPEN: 'false', TEST_CHECKOUT_EMAIL: 'buyer@example.test', RAZORPAY_KEY_ID: 'rzp_live_example', RAZORPAY_KEY_SECRET: 'secret', RAZORPAY_WEBHOOK_SECRET: 'webhook', BOOKS: {},
+    DB: { prepare(sql) { return { bind() { return this; }, async first() {
+      if (sql.includes('FROM books')) return { is_ready: 1, page_count: 223 };
+      if (sql.includes('FROM customer_profiles')) return { name: 'Buyer Name', phone: '8384871987' };
+      return null;
+    }, async run() { return { success: true }; } }; } }, ...overrides };
+}
+test('restricted checkout requires exact signed verified email and keeps public configuration closed', async () => {
+  const env = restrictedEnvironment();
+  const publicResult = await (await context(request('config?email=buyer@example.test'), env)).json();
+  assert.equal(publicResult.salesOpen, false); assert.equal(publicResult.checkoutEnabled, false);
+  assert.ok(!JSON.stringify(publicResult).includes(env.TEST_CHECKOUT_EMAIL));
+  const permitted = await (await context(request('config', 'GET', undefined, await token()), env)).json();
+  assert.equal(permitted.salesOpen, false); assert.equal(permitted.checkoutEnabled, true); assert.equal(permitted.liveTest, true);
+  const other = await (await context(request('config', 'GET', undefined, await token({ email: 'other@example.test' })), env)).json();
+  assert.equal(other.checkoutEnabled, false);
+  assert.equal((await context(request('config', 'GET', undefined, await token({ email_verified: false })), env)).status, 401);
+});
+test('only the allowed tester can create a real order while sales are closed', async () => {
+  const body = { bookId: 'cbse10-maths-standard', name: 'Buyer Name', phone: '8384871987', consent: true, coupon: 'TOPPERS50' };
+  const env = restrictedEnvironment(); const initial = gatewayCalls;
+  const denied = await context(request('orders', 'POST', { ...body, email: 'buyer@example.test' }, await token({ email: 'other@example.test' })), env);
+  assert.equal(denied.status, 409); assert.equal(gatewayCalls, initial);
+  const allowed = await context(request('orders', 'POST', { ...body, amount: 1 }, await token()), env);
+  assert.equal(allowed.status, 200); const order = await allowed.json(); assert.equal(order.amount, 14900); assert.equal(order.keyId, env.RAZORPAY_KEY_ID);
+  for (const change of [{ TEST_CHECKOUT_EMAIL: '' }, { RAZORPAY_KEY_ID: 'rzp_test_example' }, { RAZORPAY_WEBHOOK_SECRET: '' }, { AUTH_DISABLED: 'true' }]) {
+    const response = await context(request('orders', 'POST', body, await token()), { ...env, ...change });
+    assert.ok([401, 409, 503].includes(response.status));
+  }
+});
+test('restricted checkout still requires the complete book to be ready', async () => {
+  const env = restrictedEnvironment({ DB: { prepare() { return { bind() { return this; }, async first() { return { is_ready: 0, page_count: 223 }; } }; } } });
+  const result = await (await context(request('config', 'GET', undefined, await token()), env)).json();
+  assert.equal(result.checkoutEnabled, false);
+  assert.equal((await context(request('orders', 'POST', {}, await token()), env)).status, 409);
 });
