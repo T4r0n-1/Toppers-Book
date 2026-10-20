@@ -2,8 +2,8 @@ export const book = {
   "id": "cbse10-maths-standard",
   "title": "CBSE Class 10 Mathematics Standard (041)",
   "pageCount": 223,
-  "edition": "2026–27 Revision Edition",
-  "previewUpdated": "2026-10-19",
+  "edition": "2026–27 First Edition",
+  "previewUpdated": "2026-10-20",
   "chapters": [
     {
       "title": "01 · Real Numbers",
@@ -70,6 +70,18 @@ export const book = {
       "src": "/assets/book-samples/page-0005.webp"
     },
     {
+      "title": "Exam time management · D → C → E → B → A",
+      "subtitle": "Book page 10",
+      "page": 10,
+      "src": "/assets/book-samples/page-0010.webp"
+    },
+    {
+      "title": "Time checkpoints & answer-writing tips",
+      "subtitle": "Book page 11",
+      "page": 11,
+      "src": "/assets/book-samples/page-0011.webp"
+    },
+    {
       "title": "Real Numbers · mind map & formulas",
       "subtitle": "Book page 14",
       "page": 14,
@@ -82,16 +94,40 @@ export const book = {
       "src": "/assets/book-samples/page-0015.webp"
     },
     {
-      "title": "Triangles · mind map & formulas",
-      "subtitle": "Book page 69",
-      "page": 69,
-      "src": "/assets/book-samples/page-0069.webp"
+      "title": "Real Numbers · questions & solutions (3/8)",
+      "subtitle": "Book page 16",
+      "page": 16,
+      "src": "/assets/book-samples/page-0016.webp"
     },
     {
-      "title": "Statistics · mind map & formulas",
-      "subtitle": "Book page 180",
-      "page": 180,
-      "src": "/assets/book-samples/page-0180.webp"
+      "title": "Real Numbers · questions & solutions (4/8)",
+      "subtitle": "Book page 17",
+      "page": 17,
+      "src": "/assets/book-samples/page-0017.webp"
+    },
+    {
+      "title": "Real Numbers · questions & solutions (5/8)",
+      "subtitle": "Book page 18",
+      "page": 18,
+      "src": "/assets/book-samples/page-0018.webp"
+    },
+    {
+      "title": "Real Numbers · questions & solutions (6/8)",
+      "subtitle": "Book page 19",
+      "page": 19,
+      "src": "/assets/book-samples/page-0019.webp"
+    },
+    {
+      "title": "Real Numbers · questions & solutions (7/8)",
+      "subtitle": "Book page 20",
+      "page": 20,
+      "src": "/assets/book-samples/page-0020.webp"
+    },
+    {
+      "title": "Real Numbers · questions & solutions (8/8)",
+      "subtitle": "Book page 21",
+      "page": 21,
+      "src": "/assets/book-samples/page-0021.webp"
     }
   ]
 };

@@ -4,17 +4,17 @@ import { access, readdir } from 'node:fs/promises';
 import { book } from '../assets/book-data.js';
 import { watermarkedPage } from '../functions/api/[[path]].js';
 
-test('public preview exposes only five selected pages with their original PDF references', async () => {
+test('public preview exposes only the contents, strategy pages and complete first chapter with their original PDF references', async () => {
   assert.equal(book.id, 'cbse10-maths-standard');
   assert.equal(book.pageCount, 223);
-  assert.deepEqual(book.samples.map(sample => sample.page), [5, 14, 15, 69, 180]);
-  assert.equal(new Set(book.samples.map(sample => sample.src)).size, 5);
+  assert.deepEqual(book.samples.map(sample => sample.page), [5, 10, 11, 14, 15, 16, 17, 18, 19, 20, 21]);
+  assert.equal(new Set(book.samples.map(sample => sample.src)).size, 11);
   for (const sample of book.samples) {
     assert.match(sample.src, /^\/assets\/book-samples\/page-\d{4}\.webp$/);
     await access(new URL('..' + sample.src, import.meta.url));
   }
   const files = await readdir(new URL('../assets/book-samples/', import.meta.url));
-  assert.equal(files.length, 5);
+  assert.equal(files.length, 11);
 });
 
 test('all 14 supplied chapter starts are ordered and inside the book', () => {

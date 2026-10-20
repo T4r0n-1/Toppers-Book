@@ -177,7 +177,7 @@ page/question reference. Do not publish customer details or unreviewed suggestio
 ## Supplied 223-page edition (19 October 2026)
 
 The owner supplied the complete PDF and DOCX. The public assets contain ONLY
-the cover and five selected PDF pages: 5, 14, 15, 69, 180. These replace the old
+the cover and 11 free PDF pages: contents (5), exam strategy (10–11), and complete Chapter 1 (14–21). These replace the old
 illustrative reader demo. Source labels and manuscript claims have not been
 independently audited by this deployment. No original PDF, Word file, full-page
 set or upload ZIP belongs in the public repository.

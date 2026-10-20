@@ -52,12 +52,16 @@ document.addEventListener('click', async event => {
   if (action === 'logout' && auth) { await authSDK.signOut(auth); signupDraft = null; if ($('#profile-dialog').open) $('#profile-dialog').close(); notify('You have signed out.'); }
   if (action === 'profile') await openProfile();
   if (action === 'checkout') {
+    if ($('#reader-dialog').open) $('#reader-dialog').close();
+    if ($('#details-dialog').open) $('#details-dialog').close();
+    const coupon = event.target.closest('[data-coupon]')?.dataset.coupon;
+    if (coupon) $('#coupon').value = coupon;
     if (!currentUser?.emailVerified) openDialog('#login-dialog');
     else { await loadProfile(); if (!currentProfile) { await openProfile(); return; } $('#buyer-name').value = currentProfile.name; $('#buyer-phone').value = currentProfile.phone; updateCouponTotal(); $('#checkout-status').textContent = ''; openDialog('#checkout-dialog'); }
   }
 });
 $$('dialog').forEach(dialog => dialog.addEventListener('click', event => { if (event.target !== dialog) return; const rect = dialog.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close(); }));
-function resumeKey() { return activeBook && currentUser ? `toppers-reader:${currentUser.uid}:${activeBook.bookId}` : 'toppers-book-sample-page-v1'; }
+function resumeKey() { return activeBook && currentUser ? `toppers-reader:${currentUser.uid}:${activeBook.bookId}` : 'toppers-book-sample-chapter-1-v2'; }
 let readerMode = 'spread', modeChosen = false, turnTimer = null;
 const roughPads = setupRoughPads($('#reader-dialog'), () => ({ uid: currentUser?.uid || 'sample', book: activeBook?.bookId || 'sample' }));
 const readerPresentation = setupReaderFullscreen($('#reader-dialog'), {
@@ -95,6 +99,7 @@ async function renderPage() {
   page = Math.max(0, Math.min(Math.trunc(Number(page)) || 0, total - 1));
   const visible = visiblePages();
   const first = visible[0], last = visible.at(-1);
+  $('#sample-end-cta').hidden = !!book || last !== total - 1;
   $('#page-label').textContent = book ? `${first + 1}${last !== first ? '–' + (last + 1) : ''} / ${total}` : `Sample ${page + 1} / ${total} · Book p. ${samples[page].page}`;
   $('#jump-page').max = total; $('#jump-page').value = page + 1;
   $('#reader-correction').href = `/corrections.html?source=${book ? 'book' : 'sample'}&page=${book ? page + 1 : samples[page].page}#suggest`;
@@ -143,9 +148,9 @@ function startReader(book = null) {
   readerMode = book && matchMedia('(min-width: 900px)').matches ? 'spread' : 'single';
   $('#reader-view').value = readerMode; $('#reader-view').disabled = !book;
   page = Math.max(0, Number(safeStorage('get', resumeKey())) || 0);
-  $('#reader-title').textContent = book ? book.title : 'Selected pages from the book';
-  $('#reader-kicker').textContent = book ? 'YOUR PERSONALISED READING COPY' : 'PUBLIC BOOK SAMPLE · 5 SELECTED PAGES';
-  $('#reader-disclaimer').textContent = book ? 'Personalised online reading. Scroll here for all chapters. Use Next to turn the book.' : 'Five selected pages from the supplied 223-page edition. Full book access is not included.';
+  $('#reader-title').textContent = book ? book.title : 'Chapter 1: Real Numbers · FREE';
+  $('#reader-kicker').textContent = book ? 'YOUR PERSONALISED READING COPY' : 'FREE CHAPTER 1 + EXAM STRATEGY · 11 PAGES';
+  $('#reader-disclaimer').textContent = book ? 'Personalised online reading. Scroll here for all chapters. Use Next to turn the book.' : 'Contents (p. 5), time-management and answer-writing tips (p. 10–11), and complete Chapter 1 (p. 14–21). Full book: 223 pages.';
   const contents = book ? book.chapters : samples.map((s, i) => ({ title: s.title, subtitle: s.subtitle, page: i + 1 }));
   $('#reader-contents').replaceChildren(...contents.map(entry => {
     const button = document.createElement('button'); button.textContent = entry.title; button.dataset.page = entry.page - 1;
@@ -292,7 +297,7 @@ async function showLibrary() {
   const userAtRequest = currentUser.uid;
   try {
     const data = await api('library'); if (currentUser?.uid !== userAtRequest) return;
-    if (!data.books.length) { emptyLibrary('Your next chapter is on its way.', 'You have no purchased books yet. Explore the complete Class 10 Mathematics edition and its selected sample pages.', 'home', 'Explore the store →'); return; }
+    if (!data.books.length) { emptyLibrary('Your next chapter is on its way.', 'You have no purchased books yet. Explore the complete Class 10 Mathematics edition and its free Real Numbers chapter.', 'home', 'Explore the store →'); return; }
     $('#library-content').replaceChildren(...data.books.map(book => {
       const article = document.createElement('article'); article.className = 'owned-book';
       const image = new Image(); image.src = '/assets/maths-cover.webp'; image.alt = book.title;
