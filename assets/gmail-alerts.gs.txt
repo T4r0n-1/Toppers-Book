@@ -1,0 +1,91 @@
+/** Toppers Books Gmail alerts. Paste this entire file into Apps Script's Code.gs.
+ * Create/run this project ONLY while signed into codetoppers@gmail.com.
+ * No web-app deployment is needed. setupPracticeAlerts sends nothing.
+ */
+const TOPPERS_SITE = 'https://toppers-book.pages.dev';
+const TOPPERS_SENDER = 'codetoppers@gmail.com';
+
+function checkSender_() {
+  if (Session.getEffectiveUser().getEmail().toLowerCase() !== TOPPERS_SENDER) {
+    throw new Error('Open this Apps Script project using ' + TOPPERS_SENDER + '.');
+  }
+}
+function setupPracticeAlerts() {
+  checkSender_();
+  const properties = PropertiesService.getScriptProperties();
+  if (!properties.getProperty('PRACTICE_MAILER_SECRET')) {
+    properties.setProperty('PRACTICE_MAILER_SECRET', Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, ''));
+  }
+  MailApp.getRemainingDailyQuota();
+  console.log('Setup prepared. No emails sent and no automatic trigger started.');
+  console.log('Open Project Settings → Script properties. Copy PRACTICE_MAILER_SECRET privately into the Cloudflare Pages production secret with the same name, then redeploy the latest production deployment. Do not paste it in chat.');
+  console.log('After Cloudflare finishes deploying, run startPracticeAlerts.');
+}
+function mailerRequest_(body) {
+  const secret = PropertiesService.getScriptProperties().getProperty('PRACTICE_MAILER_SECRET');
+  if (!secret) throw new Error('Run setupPracticeAlerts first.');
+  const response = UrlFetchApp.fetch(TOPPERS_SITE + '/api/practice-mailer', {
+    method: 'post', contentType: 'application/json', headers: { Authorization: 'Bearer ' + secret },
+    payload: JSON.stringify(body), muteHttpExceptions: true, followRedirects: false
+  });
+  if (response.getResponseCode() !== 200) throw new Error('Website connection failed (HTTP ' + response.getResponseCode() + '). Check the Cloudflare secret and deployment. No secret or recipient data is logged.');
+  return JSON.parse(response.getContentText());
+}
+function startPracticeAlerts() {
+  checkSender_();
+  const result = mailerRequest_({ action: 'status' });
+  if (!result.connected) throw new Error('Website connection is not ready.');
+  const props = PropertiesService.getScriptProperties();
+  // A one-time test to the owner, never to students.
+  if (!props.getProperty('TEST_EMAIL_ATTEMPTED')) {
+    if (MailApp.getRemainingDailyQuota() < 1) throw new Error('No Gmail quota left. Try again after the quota resets.');
+    props.setProperty('TEST_EMAIL_ATTEMPTED', String(Date.now()));
+    MailApp.sendEmail({ to: TOPPERS_SENDER, subject: 'Toppers Books: Gmail practice alerts connected', body: 'Your Gmail sender is connected to Toppers Books. Every 15 minutes it will check for newly published papers. No old practice questions are being announced. A maximum of 90 student alerts is attempted per rolling 24-hour window, subject to your remaining Google quota.\n\n' + TOPPERS_SITE, name: 'Toppers Books' });
+  }
+  const exists = ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() === 'sendPracticeAlerts');
+  if (!exists) ScriptApp.newTrigger('sendPracticeAlerts').timeBased().everyMinutes(15).create();
+  console.log('Connected. A one-time setup-test email was attempted to ' + TOPPERS_SENDER + '. New-paper checks are scheduled every 15 minutes.');
+}
+function stopPracticeAlerts() {
+  checkSender_();
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'sendPracticeAlerts').forEach(t => ScriptApp.deleteTrigger(t));
+  console.log('Automatic practice alerts stopped. Subscriber preferences are unchanged.');
+}
+function sendPracticeAlerts() {
+  checkSender_();
+  const lock = LockService.getScriptLock(); if (!lock.tryLock(1000)) return;
+  try {
+    const started = Date.now(), props = PropertiesService.getScriptProperties();
+    let budget = JSON.parse(props.getProperty('ALERT_BUDGET') || '{"started":0,"attempts":0}');
+    if (Date.now() - budget.started >= 24 * 60 * 60 * 1000) budget = { started: Date.now(), attempts: 0 };
+    let sent = 0;
+    while (sent < 10 && Date.now() - started < 240000 && budget.attempts < 90 && MailApp.getRemainingDailyQuota() > 5) {
+      // Claim only one recipient at a time, after checking quota. Never return reserved jobs to the queue automatically.
+      const jobs = mailerRequest_({ action: 'next', limit: 1 }).jobs || [];
+      if (!jobs.length) break;
+      const job = jobs[0];
+      if (!/^[a-f0-9]{32}$/.test(job.id) || !/^[^\s<>@,;]+@[^\s<>@,;]+$/.test(job.email) || !job.url.startsWith(TOPPERS_SITE + '/') || !job.unsubscribe.startsWith(TOPPERS_SITE + '/api/practice-unsubscribe?token=')) throw new Error('Invalid mail job. Nothing was sent; review the reserved job.');
+      budget.attempts++;
+      props.setProperty('ALERT_BUDGET', JSON.stringify(budget));
+      let delivered = false;
+      try {
+        MailApp.sendEmail({
+          to: job.email,
+          subject: 'New practice paper: ' + String(job.title).replace(/[\r\n]/g, ' ').slice(0,150),
+          name: 'Toppers Books', replyTo: TOPPERS_SENDER,
+          body: 'A new practice paper is ready: ' + job.title + '\n\nPractise now: ' + job.url + '\n\nYou receive this because practice-paper email alerts are enabled for your Toppers Books account.\nUnsubscribe: ' + job.unsubscribe,
+          htmlBody: '<h2>A new practice paper is ready</h2><p>' + html_(job.title) + '</p><p><a href="' + html_(job.url) + '" style="display:inline-block;background:#6040b8;color:white;padding:12px 20px;border-radius:6px;text-decoration:none">Practise now →</a></p><p>You receive this because practice-paper email alerts are enabled for your Toppers Books account.</p><p><a href="' + html_(job.unsubscribe) + '">Unsubscribe from practice emails</a></p><p>Toppers Books · GUPTA ENTERPRISES · Tajganj, Agra, Uttar Pradesh – 282001</p>'
+        });
+        delivered = true;
+      } finally {
+        // If sending or acknowledgement fails, leave the job reserved/failed for review. Retrying it automatically could duplicate an email.
+        mailerRequest_({ action: 'ack', id: job.id, status: delivered ? 'sent' : 'failed' });
+      }
+      sent++;
+    }
+    console.log('Completed this run: ' + sent + ' alerts. Attempts in the current 24-hour window: ' + budget.attempts + '/90. No email addresses are logged.');
+  } finally { lock.releaseLock(); }
+}
+function html_(value) {
+  return String(value).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]);
+}

@@ -1,3 +1,4 @@
+import { recordVerifiedSubscriber, practiceMailer, practiceUnsubscribe } from '../_lib/practice-mailer.js';
 import firebaseConfig from '../../assets/firebase-config.js';
 // Cloudflare Pages Functions. Paid assets are NEVER stored in the public checkout.
 const BOOK_ID = 'cbse10-maths-standard';
@@ -41,7 +42,7 @@ export function xml(value) { return String(value).replace(/[&<>"']/g, character 
 function unbase64url(value) { const padded = value.replace(/-/g, '+').replace(/_/g, '/'); return Uint8Array.from(atob(padded.padEnd(Math.ceil(padded.length / 4) * 4, '=')), character => character.charCodeAt(0)); }
 export function validateClaims(claims, projectId, now = Math.floor(Date.now() / 1000), requireVerified = true) {
   if (!projectId || claims.aud !== projectId || claims.iss !== `https://securetoken.google.com/${projectId}` || typeof claims.sub !== 'string' || !claims.sub || claims.sub.length > 128 || !Number.isFinite(claims.exp) || claims.exp <= now || !Number.isFinite(claims.iat) || claims.iat > now || !Number.isFinite(claims.auth_time) || claims.auth_time > now || (requireVerified && claims.email_verified !== true) || typeof claims.email !== 'string') fail(401, 'Please sign in again with a verified email address.');
-  return { uid: claims.sub, email: claims.email };
+  return { uid: claims.sub, email: claims.email, emailVerified: claims.email_verified === true };
 }
 async function authenticate(request, env, requireVerified = true) {
   const token = request.headers.get('Authorization')?.match(/^Bearer ([A-Za-z0-9_.-]+)$/)?.[1];
@@ -99,7 +100,7 @@ async function practicePreference(env, user, enabled) {
   const store = db(env);
   await store.prepare('CREATE TABLE IF NOT EXISTS practice_email_preferences (\n  uid TEXT PRIMARY KEY,\n  email TEXT NOT NULL,\n  enabled INTEGER NOT NULL DEFAULT 0 CHECK (enabled IN (0,1)),\n  updated_at INTEGER NOT NULL\n);').run();
   if (typeof enabled === 'boolean') {
-    await store.prepare('INSERT INTO practice_email_preferences (uid, email, enabled, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(uid) DO UPDATE SET email = excluded.email, enabled = excluded.enabled, updated_at = excluded.updated_at').bind(user.uid, user.email, enabled ? 1 : 0, Math.floor(Date.now() / 1000)).run();
+    await store.prepare('INSERT INTO practice_email_preferences (uid, email, enabled, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(uid) DO UPDATE SET email = excluded.email, enabled = excluded.enabled, updated_at = CASE WHEN practice_email_preferences.enabled = excluded.enabled AND practice_email_preferences.email = excluded.email THEN practice_email_preferences.updated_at ELSE excluded.updated_at END').bind(user.uid, user.email, enabled ? 1 : 0, Math.floor(Date.now() / 1000)).run();
     return enabled;
   }
   const saved = await store.prepare('SELECT enabled FROM practice_email_preferences WHERE uid = ?').bind(user.uid).first();
@@ -109,6 +110,7 @@ async function profile(request, env, user) {
   if (!env.DB) fail(503, 'Profile saving is temporarily unavailable. Please try again shortly.');
   if (request.method === 'GET') {
     const saved = await db(env).prepare('SELECT name, phone, phone_verified FROM customer_profiles WHERE uid = ?').bind(user.uid).first();
+    if (saved) await recordVerifiedSubscriber(env, user);
     return json({ profile: saved ? { name: saved.name, phone: saved.phone, email: user.email, phoneVerified: saved.phone_verified === 1, practiceAlerts: await practicePreference(env, user) } : null });
   }
   const body = await bodyJson(request);
@@ -120,6 +122,7 @@ async function profile(request, env, user) {
   // A number entered by the user is not an SMS-verified phone identity.
   await db(env).prepare('INSERT INTO customer_profiles (uid, email, name, phone, phone_verified, created_at, updated_at, consent_at) VALUES (?, ?, ?, ?, 0, ?, ?, ?) ON CONFLICT(uid) DO UPDATE SET email = excluded.email, name = excluded.name, phone = excluded.phone, phone_verified = CASE WHEN customer_profiles.phone = excluded.phone THEN customer_profiles.phone_verified ELSE 0 END, updated_at = excluded.updated_at, consent_at = excluded.consent_at').bind(user.uid, user.email, details.name, details.phone, now, now, now).run();
   const practiceAlerts = await practicePreference(env, user, body.practiceAlerts);
+  await recordVerifiedSubscriber(env, user);
   return json({ saved: true, profile: { ...details, email: user.email, phoneVerified: false, practiceAlerts } });
 }
 async function createOrder(request, env, user) {
@@ -239,6 +242,8 @@ export async function onRequest({ request, env }) {
   try {
     const path = new URL(request.url).pathname.replace(/^\/api\/?/, '').split('/').filter(Boolean);
     const route = path[0]; const method = request.method;
+    if (route === 'practice-mailer' && path.length === 1) return await practiceMailer(request, env);
+    if (route === 'practice-unsubscribe' && path.length === 1) return await practiceUnsubscribe(request, env);
     if (route === 'config' && path.length === 1 && method === 'GET') return await publicConfig(env, request);
     if (route === 'webhook' && path.length === 1 && method === 'POST') return await webhook(request, env);
     if (!['orders', 'verify', 'library', 'read', 'profile'].includes(route)) fail(404, 'Endpoint not found.');

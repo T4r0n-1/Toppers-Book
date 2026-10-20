@@ -44,11 +44,12 @@ test('order ownership is checked before a gateway confirmation', async () => { c
 test('captured payment retries use an idempotent entitlement write', async () => { const batches = []; const order = { id: 'order_demo', uid: 'buyer-a', book_id: 'cbse10-maths-standard', amount: 14900, reader_name: 'Buyer', phone: '8384871987', status: 'paid', paid_at: now - 300 }; const env = { FIREBASE_PROJECT_ID: 'test-project', RAZORPAY_KEY_ID: 'rzp_live_example', RAZORPAY_KEY_SECRET: 'secret', DB: { prepare(sql) { return { sql, bind(...args) { this.args = args; return this; }, async first() { return order; } }; }, async batch(statements) { batches.push(statements); } } }; paymentResponse = { id: 'pay_demo', order_id: order.id, status: 'captured', captured: true, amount: 14900, currency: 'INR', amount_refunded: 0, created_at: now - 300 }; const signature = createHmac('sha256', 'secret').update('order_demo|pay_demo').digest('hex'); const body = { razorpay_order_id: order.id, razorpay_payment_id: 'pay_demo', razorpay_signature: signature }; for (let i = 0; i < 2; i++) assert.equal((await context(request('verify', 'POST', body, await token()), env)).status, 200); assert.equal(batches.length, 2); for (const statements of batches) { assert.equal(statements[0].args[1], now - 300); assert.match(statements[1].sql, /ON CONFLICT\(order_id\) DO NOTHING/); assert.match(statements[1].sql, /status = 'paid'/); } });
 
 function profileDatabase() {
-  const profiles = new Map(), preferences = new Map();
-  return { profiles, preferences, prepare(sql) { return {
+  const profiles = new Map(), preferences = new Map(), subscribers = new Map();
+  return { profiles, preferences, subscribers, prepare(sql) { return {
     bind(...args) { this.args = args; return this; },
     async run() {
-      if (sql.startsWith('CREATE TABLE IF NOT EXISTS practice_email_preferences')) return;
+      if (sql.startsWith('CREATE TABLE IF NOT EXISTS practice_')) return;
+      if (sql.startsWith('INSERT INTO practice_mail_subscribers')) { subscribers.set(this.args[0], this.args); return; }
       if (sql.startsWith('INSERT INTO customer_profiles')) { profiles.set(this.args[0], this.args); return; }
       if (sql.startsWith('INSERT INTO practice_email_preferences')) { preferences.set(this.args[0], this.args); return; }
       throw new Error('Unexpected write: ' + sql);
@@ -66,8 +67,10 @@ test('profile persistence uses the signed UID/email and never caller-supplied id
   const saved = env.DB.profiles.get('buyer-a');
   assert.equal(response.status, 200); assert.equal(saved[0], 'buyer-a'); assert.equal(saved[1], 'buyer@example.test');
   const returned = await response.json(); assert.equal(returned.profile.phoneVerified, false); assert.equal(returned.profile.practiceAlerts, false);
+  assert.equal(env.DB.subscribers.size, 0, 'unverified tokens cannot mark an email eligible for alerts');
   const read = await context(request('profile?uid=victim', 'GET', undefined, await token()), env);
   assert.equal(read.status, 200); assert.equal((await read.json()).profile.name, 'Buyer Name');
+  assert.equal(env.DB.subscribers.get('buyer-a')[1], 'buyer@example.test');
 });
 
 test('practice alerts persist opt-in and opt-out, preserve omitted preferences and isolate accounts', async () => {
