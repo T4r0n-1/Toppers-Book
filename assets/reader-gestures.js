@@ -2,14 +2,18 @@ import { swipeDirection } from './reader-layout.js';
 
 // A trackpad swipe arrives as wheel events; iOS uses Touch Events. Keep them
 // separate from mouse/pen pointer dragging so one gesture can only turn once.
-export function bindReaderGestures(target, { enabled, onTurn, onDrag, onReset, now = () => performance.now() }) {
+export function bindReaderGestures(target, { enabled, onTurn, onDrag, onReset, onZoom = () => {}, getScale = () => globalThis.visualViewport?.scale || 1, viewport = globalThis.visualViewport, now = () => performance.now() }) {
   let pointer = null, touch = null, wheelSum = 0, wheelAt = -Infinity, wheelTurned = false;
   const subscriptions = [];
+  let pinching = false, nativeGesture = false, gestureBaseScale = 1, gestureScale = 1;
+  const canTurn = () => enabled() && !pinching && !nativeGesture && getScale() <= 1.01 && gestureScale <= 1.01;
+  function resetWheel() { wheelSum = 0; wheelAt = -Infinity; wheelTurned = false; }
+  function zoomChanged() { cancel(); resetWheel(); onZoom(); }
   function listen(type, handler, options) { target.addEventListener(type, handler, options); subscriptions.push([type, handler, options]); }
   function begin(x, y, id) { return { x, y, id, at: now(), horizontal: false }; }
   function cancel() { pointer = touch = null; onReset(); }
   function move(state, x, y, event) {
-    if (!enabled()) { cancel(); return; }
+    if (!canTurn()) { cancel(); return; }
     const dx = x - state.x, dy = y - state.y;
     if (!state.horizontal && Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) { cancel(); return; }
     if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy) * 1.2) state.horizontal = true;
@@ -19,14 +23,15 @@ export function bindReaderGestures(target, { enabled, onTurn, onDrag, onReset, n
   }
   function end(state, x, y, event) {
     if (!state) return;
-    const direction = enabled() ? swipeDirection(x - state.x, y - state.y, now() - state.at, target.clientWidth) : 0;
-    if (state.horizontal && event.cancelable) event.preventDefault();
+    const allowed = canTurn();
+    const direction = allowed ? swipeDirection(x - state.x, y - state.y, now() - state.at, target.clientWidth) : 0;
+    if (allowed && state.horizontal && event.cancelable) event.preventDefault();
     onReset();
     if (direction) onTurn(direction);
   }
   listen('pointerdown', event => {
     if (event.pointerType === 'touch') return;
-    if (!enabled() || event.isPrimary === false || event.button !== 0 || event.target.closest?.('button, a')) return;
+    if (!canTurn() || event.isPrimary === false || event.button !== 0 || event.target.closest?.('button, a')) return;
     pointer = begin(event.clientX, event.clientY, event.pointerId);
     try { target.setPointerCapture?.(event.pointerId); } catch { /* End events within the reader still work without capture. */ }
   });
@@ -35,25 +40,41 @@ export function bindReaderGestures(target, { enabled, onTurn, onDrag, onReset, n
   for (const type of ['pointercancel', 'lostpointercapture']) listen(type, event => { if (pointer?.id === event.pointerId) { pointer = null; onReset(); } });
 
   listen('touchstart', event => {
-    if (!enabled() || event.touches.length !== 1) { touch = null; onReset(); return; }
+    if (event.touches.length > 1) { pinching = true; zoomChanged(); return; }
+    if (!canTurn() || event.touches.length !== 1) { cancel(); return; }
     const finger = event.touches[0]; touch = begin(finger.clientX, finger.clientY, finger.identifier);
   }, { passive: true });
   listen('touchmove', event => {
+    if (event.touches.length > 1) { pinching = true; zoomChanged(); return; }
     if (!touch) return;
     if (event.touches.length !== 1) { cancel(); return; }
     const finger = [...event.touches].find(t => t.identifier === touch.id);
     if (finger) move(touch, finger.clientX, finger.clientY, event);
   }, { passive: false });
   listen('touchend', event => {
+    if (pinching) { if (!event.touches?.length) pinching = false; cancel(); return; }
     if (!touch) return;
     const finger = [...event.changedTouches].find(t => t.identifier === touch.id);
     if (!finger) return;
     const state = touch; touch = null; end(state, finger.clientX, finger.clientY, event);
   }, { passive: false });
-  listen('touchcancel', () => { touch = null; onReset(); }, { passive: true });
+  listen('touchcancel', () => { pinching = false; cancel(); }, { passive: true });
 
+  // Safari exposes native pinch gestures separately from the reader's +/− zoom.
+  listen('gesturestart', () => { nativeGesture = true; gestureBaseScale = gestureScale; zoomChanged(); }, { passive: true });
+  listen('gesturechange', event => {
+    if (Number.isFinite(event.scale) && event.scale > 0) gestureScale = Math.max(1, gestureBaseScale * event.scale);
+    zoomChanged();
+  }, { passive: true });
+  listen('gestureend', event => {
+    if (Number.isFinite(event.scale) && event.scale > 0) gestureScale = Math.max(1, gestureBaseScale * event.scale);
+    nativeGesture = false; zoomChanged();
+  }, { passive: true });
+  const viewportChanged = () => { cancel(); resetWheel(); if (getScale() > 1.01) onZoom(); };
+  viewport?.addEventListener('resize', viewportChanged);
   listen('wheel', event => {
-    if (!enabled() || event.ctrlKey || event.metaKey) return;
+    if (event.ctrlKey || event.metaKey) { zoomChanged(); return; }
+    if (!canTurn()) { cancel(); resetWheel(); return; }
     let dx = event.deltaX, dy = event.deltaY;
     if (event.shiftKey && !dx) { dx = dy; dy = 0; }
     if (!Number.isFinite(dx) || Math.abs(dx) <= Math.abs(dy) * 1.2 || Math.abs(dx) < .1) return;
@@ -69,7 +90,7 @@ export function bindReaderGestures(target, { enabled, onTurn, onDrag, onReset, n
     if (Math.abs(wheelSum) >= 45) { wheelTurned = true; onTurn(wheelSum > 0 ? 1 : -1); }
   }, { passive: false });
   return {
-    reset() { pointer = touch = null; wheelSum = 0; wheelAt = -Infinity; wheelTurned = false; onReset(); },
-    destroy() { subscriptions.forEach(([type, handler, options]) => target.removeEventListener(type, handler, options)); }
+    reset() { cancel(); resetWheel(); },
+    destroy() { viewport?.removeEventListener('resize', viewportChanged); subscriptions.forEach(([type, handler, options]) => target.removeEventListener(type, handler, options)); }
   };
 }

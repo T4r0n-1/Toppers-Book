@@ -1,5 +1,5 @@
 import { spreadPages, turnPage, fitSpread } from './reader-layout.js';
-import { bindReaderGestures } from './reader-gestures.js';
+import { bindReaderGestures } from './reader-gestures.js?v=native-zoom-2';
 import { setupReaderFullscreen } from './reader-fullscreen.js';
 import { setupRoughPads } from './rough-pad.js';
 import { book as bookEdition } from './book-data.js';
@@ -189,6 +189,7 @@ const readingViewport = $('#page-viewport');
 const readerGestures = bindReaderGestures(readingViewport, {
   enabled: () => $('#reader-dialog').open && zoom === 1 && !readerPresentation.locked,
   onTurn: navigateReader,
+  onZoom: resetPageTurn,
   onReset: () => { if (turnTimer === null) resetPageTurn(); },
   onDrag: dx => {
     if (turnTimer !== null) return;
@@ -201,9 +202,9 @@ $('#prev-page').addEventListener('click', () => navigateReader(-1));
 $('#next-page').addEventListener('click', () => navigateReader(1));
 $('#jump-prev').addEventListener('click', () => navigateReader(-1));
 $('#jump-next').addEventListener('click', () => navigateReader(1));
-$('#zoom-in').addEventListener('click', () => { zoom = Math.min(3, zoom + .25); applyZoom(); });
-$('#zoom-out').addEventListener('click', () => { zoom = Math.max(1, zoom - .25); applyZoom(); });
-$('#reset-zoom').addEventListener('click', () => { zoom = 1; applyZoom(); $('#page-viewport').scrollTop = 0; $('#page-viewport').scrollLeft = 0; });
+$('#zoom-in').addEventListener('click', () => { readerGestures.reset(); resetPageTurn(); zoom = Math.min(3, zoom + .25); applyZoom(); });
+$('#zoom-out').addEventListener('click', () => { readerGestures.reset(); resetPageTurn(); zoom = Math.max(1, zoom - .25); applyZoom(); });
+$('#reset-zoom').addEventListener('click', () => { readerGestures.reset(); resetPageTurn(); zoom = 1; applyZoom(); $('#page-viewport').scrollTop = 0; $('#page-viewport').scrollLeft = 0; });
 $('#reader-view').addEventListener('change', event => { readerMode = event.target.value; modeChosen = true; zoom = 1; renderPage(); });
 $('#toggle-contents').addEventListener('click', () => setContents($('#reader-dialog').classList.contains('contents-hidden')));
 $('#reader-jump').addEventListener('submit', event => { event.preventDefault(); if (readerPresentation.locked) return; if (!$('#reader-jump').reportValidity()) return; page = Number($('#jump-page').value) - 1; zoom = 1; renderPage(); });
